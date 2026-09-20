@@ -39,3 +39,28 @@ async function checkHealth() {
 }
 
 checkHealth();
+
+const challengeButton = document.querySelector("#challenge-button");
+const challengeResult = document.querySelector("#challenge-result");
+
+challengeButton.addEventListener("click", async () => {
+  challengeResult.textContent = "抽取任務中⋯";
+  challengeButton.disabled = true;
+
+  try {
+    const response = await fetch("/api/challenge");
+
+    if (!response.ok) {
+      throw new Error("API 回應 " + response.status);
+    }
+
+    const data = await response.json();
+
+    challengeResult.textContent =
+      data.title + "：" + data.description;
+  } catch (error) {
+    challengeResult.textContent = "抽取失敗：" + error.message;
+  } finally {
+    challengeButton.disabled = false;
+  }
+});

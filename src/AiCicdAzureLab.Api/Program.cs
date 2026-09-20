@@ -19,6 +19,11 @@ app.MapGet("/api/greeting", (string? name) =>
     .WithName("Greeting")
     .WithTags("Demo");
 
+app.MapGet("/api/challenge", () =>
+    Results.Ok(ChallengeService.Draw()))
+    .WithName("Challenge")
+    .WithTags("Demo");
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
