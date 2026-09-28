@@ -23,6 +23,7 @@
    - **Audience**：`api://AzureADTokenExchange`
 3. 將下列 Azure 角色指派給該 service principal：
    - `AcrPush`：範圍限於課程 ACR。
+   - `Reader`：範圍限於課程 ACR，供 Workflow 查詢 Registry 的 `loginServer`。
    - `Contributor`：範圍限於要更新的單一 Container App 資源。
 4. 將 `AcrPull` 指派給 Container App 使用的 managed identity，範圍限於課程 ACR。Container App 的 ACR 登錄設定必須使用同一個 managed identity，不能依賴 ACR admin 帳密。
 
