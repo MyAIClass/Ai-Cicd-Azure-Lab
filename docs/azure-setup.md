@@ -19,7 +19,7 @@
 1. 建立或選用專供此 Repository 部署的 Microsoft Entra ID app registration 與 service principal。
 2. 在該 app registration 新增 Federated Credential：
    - **Issuer**：`https://token.actions.githubusercontent.com`
-   - **Subject identifier**：`repo:MyAIClass/AiCicdAzureLab:environment:demo`
+   - **Subject identifier**：`repo:MyAIClass/Ai-Cicd-Azure-Lab:environment:demo`
    - **Audience**：`api://AzureADTokenExchange`
 3. 將下列 Azure 角色指派給該 service principal：
    - `AcrPush`：範圍限於課程 ACR。
