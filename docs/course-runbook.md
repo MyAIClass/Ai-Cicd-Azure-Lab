@@ -92,7 +92,8 @@ dotnet test tests/AiCicdAzureLab.Api.Tests/AiCicdAzureLab.Api.Tests.csproj --no-
 | tests/AiCicdAzureLab.Api.Tests/GreetingServiceTests.cs | 驗證空白名稱與自訂名稱 |
 | Dockerfile | 建立 .NET publish image，並以 port 8080 啟動 |
 | .github/workflows/ci.yml | 在 push/PR 執行 restore、test 與 Docker build |
-| .github/workflow-templates/azure-deploy.yml | Azure 部署範本；尚未設定時不會自動執行 |
+| .github/workflow-templates/azure-deploy.yml | 課堂閱讀／跨 Repository 示範範本；不會由此 Repository 執行 |
+| .github/workflows/azure-deploy.yml | 此 Repository 實際使用的 Azure 部署 workflow；需要先完成 OIDC 與 `demo` Environment 設定 |
 
 請強調流程中的關係：
 
@@ -237,10 +238,10 @@ docker build --no-cache -t ai-cicd-azure-lab .
 
 課前已完成 Azure 設定時，依下列順序示範：
 
-1. 將 .github/workflow-templates/azure-deploy.yml 複製為 .github/workflows/azure-deploy.yml，確認只在講師指定的 branch 或 workflow_dispatch 執行。
-2. 檢查 GitHub demo Environment 的 Variables 是否已設定，值由講師管理，不在課堂投影片或 Repository 顯示。
+1. 先以 .github/workflow-templates/azure-deploy.yml 說明 OIDC、測試、image push 與部署的步驟，再對照 .github/workflows/azure-deploy.yml，指出後者才是此 Repository 實際執行的 workflow。
+2. 確認實際 workflow 只允許 main branch 部署，並檢查 GitHub `demo` Environment 的 Variables 是否已設定；值由講師管理，不在課堂投影片或 Repository 顯示。
 3. 確認 workflow 使用 id-token: write 和 azure/login@v2，沒有把 Azure API Key 寫進 YAML。
-4. 執行 workflow，觀察 az acr build 以 commit SHA 建立 image。
+4. 執行 workflow，觀察 Docker build/push 以 commit SHA 標記 image 並推送至 ACR。
 5. 觀察 az containerapp update 將同一個 SHA image 部署到 Container App。
 6. 開啟 Container App URL，呼叫 /health 與 /api/greeting。
 7. 在 Application Insights 或 Log Analytics 查詢成功請求及一筆示範錯誤。
@@ -315,7 +316,7 @@ docker build --no-cache -t ai-cicd-azure-lab .
 4. 清除 GitHub Environment 中不再需要的 Variables/Secrets。
 5. 檢查 GitHub Actions、Azure Activity Log 與 Repository history，確認沒有意外提交機密。
 
-完整 Azure 預建順序與權限說明請參考 [azure-setup.md](azure-setup.md)；本機開發和 Docker 指令請參考 [README.md](../README.md)。
+完整 Azure 預建順序、OIDC 權限與待設定識別資料請參考 [azure-setup.md](azure-setup.md)；本機開發和 Docker 指令請參考 [README.md](../README.md)。課堂範本用於教學與移植，實際部署一律由 `.github/workflows/azure-deploy.yml` 執行。
 
 ## 課程原則
 

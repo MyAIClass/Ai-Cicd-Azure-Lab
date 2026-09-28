@@ -21,7 +21,7 @@ GitHub Push / Pull Request
 → dotnet restore、dotnet test、Docker build
 → Azure Container Registry
 → Azure Container Apps
-→ Application Insights / Log Analytics
+→ Application Insights / Log Analytics（後續階段可選）
 
 應用程式本身包含：
 
@@ -34,7 +34,8 @@ GitHub Push / Pull Request
     ai-cicd-azure-lab/
     ├─ .github/
     │  ├─ workflows/
-    │  │  └─ ci.yml
+    │  │  ├─ ci.yml
+    │  │  └─ azure-deploy.yml
     │  └─ workflow-templates/
     │     └─ azure-deploy.yml
     ├─ src/
@@ -99,7 +100,9 @@ Windows PowerShell：
 3. 執行 xUnit 測試
 4. 建立 Docker Image
 
-Azure 部署流程先放在 .github/workflow-templates/azure-deploy.yml，完成 Azure 資源與 OIDC 設定後，再依 docs/azure-setup.md 啟用。這樣尚未設定 Azure 時，CI 仍然可以正常執行。
+實際部署 workflow 位於 `.github/workflows/azure-deploy.yml`，會在 `main` 分支 push 或手動觸發時，先執行測試，再透過 OIDC 將 image 推送至 ACR 並更新既有 Container App。啟用部署前，請依 [docs/azure-setup.md](docs/azure-setup.md) 設定 GitHub `demo` Environment、Entra Federated Credential 與最小範圍的 Azure 權限。未完成設定時，CI 不受影響；部署 workflow 會在設定檢查階段停止。
+
+`.github/workflow-templates/azure-deploy.yml` 是課堂教學參考檔，不會由本 Repository 執行，且只提供手動觸發。它保留供學員閱讀、比較或帶到其他 Repository 示範；實際部署請使用 `.github/workflows/azure-deploy.yml`，並依目標 Repository 重新設定 OIDC subject 與 Azure 權限。
 
 ## 推送到 GitHub
 
