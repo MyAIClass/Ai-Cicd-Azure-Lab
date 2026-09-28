@@ -1,12 +1,9 @@
-# 課堂教學參考：此路徑不會由本 Repository 的 GitHub Actions 執行，且僅手動觸發。
-# 本 Repository 實際使用的 workflow 是 .github/workflows/azure-deploy.yml。
-# 教學時可對照兩份檔案；若帶到其他 Repository，先確認 branch、Environment
-# Variables、OIDC subject 與 Azure 權限都已改成該 Repository 的設定。
-
-name: Azure deploy (teaching reference)
+name: Azure deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
