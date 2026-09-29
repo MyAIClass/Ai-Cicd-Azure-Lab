@@ -250,7 +250,16 @@ docker build --no-cache -t ai-cicd-azure-lab .
 
 ### 8. AI 輔助審查與錯誤診斷（30 分鐘）
 
-本 Repository 沒有自動呼叫 Azure OpenAI 的程式碼；本段示範的是安全的人工輔助流程，不代表 AI 結果會自動核准 PR 或直接修改正式環境。
+本 Repository 的 `.github/workflows/ai-review.yml` 會在 Pull Request 開啟或更新時，自動把差異送給 Azure OpenAI，並將建議留言回 PR；詳細設定請見 [docs/azure-openai-review.md](azure-openai-review.md)。這個自動審查只提供建議，不會自動核准、合併或修改程式碼，仍需人工判斷是否採用。
+
+先帶學員在自己的 PR 上觀察自動留言：
+
+1. 開啟課堂建立的 Pull Request，確認 Actions 出現 `Azure OpenAI PR review` 這個 workflow run。
+2. 找到以 `🤖 Azure OpenAI 審查建議` 開頭的留言，逐條對照實際程式碼是否合理。
+3. 若建議提到缺少測試或潛在問題，讓學員決定是否修改程式碼或測試後重新 push；重新 push 後留言會更新，不會重複新增。
+4. 強調此留言只是建議：若 AI 誤判或建議不合理，以人工判斷與既有 CI 結果為準。
+
+CI 失敗或 Docker log 的診斷，目前仍以下列人工流程為主（尚未自動化）：
 
 建議流程：
 
@@ -297,6 +306,7 @@ docker build --no-cache -t ai-cicd-azure-lab .
 | Azure login 失敗 | GitHub Environment、OIDC permission、Federated Credential | 由講師檢查設定，不要改用硬編碼 API Key |
 | Container App 無法拉取 image | ACR image/tag 與 Managed Identity 權限 | 確認 image 使用正確 commit SHA，並檢查 AcrPull |
 | Azure 產生非預期費用 | 資源狀態與 Log Analytics 保留設定 | 立即通知講師，依清理清單停止或刪除課程資源 |
+| PR 沒有出現 AI 審查留言 | Actions 是否執行 `Azure OpenAI PR review`、`demo` Environment 的 `AZURE_OPENAI_*` Variables、service principal 是否有 Azure OpenAI 呼叫權限 | 依 [azure-openai-review.md](azure-openai-review.md) 檢查設定；PR 來自 fork 時此 workflow 會略過，屬預期行為 |
 
 ## 六、安全與課後清理
 
@@ -316,7 +326,7 @@ docker build --no-cache -t ai-cicd-azure-lab .
 4. 清除 GitHub Environment 中不再需要的 Variables/Secrets。
 5. 檢查 GitHub Actions、Azure Activity Log 與 Repository history，確認沒有意外提交機密。
 
-完整 Azure 預建順序、OIDC 權限與待設定識別資料請參考 [azure-setup.md](azure-setup.md)；本機開發和 Docker 指令請參考 [README.md](../README.md)。課堂範本用於教學與移植，實際部署一律由 `.github/workflows/azure-deploy.yml` 執行。
+完整 Azure 預建順序、OIDC 權限與待設定識別資料請參考 [azure-setup.md](azure-setup.md)；Azure OpenAI PR 自動審查的設定與安全設計請參考 [azure-openai-review.md](azure-openai-review.md)；本機開發和 Docker 指令請參考 [README.md](../README.md)。課堂範本用於教學與移植，實際部署一律由 `.github/workflows/azure-deploy.yml` 執行。
 
 ## 課程原則
 

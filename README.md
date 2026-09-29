@@ -35,7 +35,8 @@ GitHub Push / Pull Request
     ├─ .github/
     │  ├─ workflows/
     │  │  ├─ ci.yml
-    │  │  └─ azure-deploy.yml
+    │  │  ├─ azure-deploy.yml
+    │  │  └─ ai-review.yml
     │  └─ workflow-templates/
     │     └─ azure-deploy.yml
     ├─ src/
@@ -103,6 +104,8 @@ Windows PowerShell：
 實際部署 workflow 位於 `.github/workflows/azure-deploy.yml`，會在 `main` 分支 push 或手動觸發時，先執行測試，再透過 OIDC 將 image 推送至 ACR 並更新既有 Container App。啟用部署前，請依 [docs/azure-setup.md](docs/azure-setup.md) 設定 GitHub `demo` Environment、Entra Federated Credential 與最小範圍的 Azure 權限。未完成設定時，CI 不受影響；部署 workflow 會在設定檢查階段停止。
 
 `.github/workflow-templates/azure-deploy.yml` 是課堂教學參考檔，不會由本 Repository 執行，且只提供手動觸發。它保留供學員閱讀、比較或帶到其他 Repository 示範；實際部署請使用 `.github/workflows/azure-deploy.yml`，並依目標 Repository 重新設定 OIDC subject 與 Azure 權限。
+
+`.github/workflows/ai-review.yml` 會在 Pull Request 開啟或更新時執行，沿用相同的 OIDC 設定登入 Azure，呼叫 Azure OpenAI 為這次差異產生審查建議，並留言回 Pull Request。這個 workflow 只提供建議，不會阻擋合併、自動核准或修改程式碼；啟用前請依 [docs/azure-openai-review.md](docs/azure-openai-review.md) 補上 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_DEPLOYMENT` 兩個 Environment Variables，並確認該 service principal 已取得 Azure OpenAI 資源的呼叫權限。
 
 ## 推送到 GitHub
 

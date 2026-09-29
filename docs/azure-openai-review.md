@@ -1,0 +1,62 @@
+# Azure OpenAI Pull Request 審查（第三階段）
+
+本階段讓 GitHub Actions 在 Pull Request 開啟或更新時，自動取得程式碼差異，透過 OIDC 登入 Azure 並呼叫 Azure OpenAI，將審查建議留言回 Pull Request。這個 Workflow **只提供建議，不會阻擋或自動核准合併**，也不會修改程式碼。
+
+## 沿用第一階段的 OIDC 設定
+
+Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) 相同的 `demo` Environment 與 Microsoft Entra ID service principal，登入方式同樣是 OIDC，不新增任何長期金鑰。
+
+在既有的 Federated Credential 與角色指派之外，這個階段需要額外授權，讓同一個 service principal 可以呼叫 Azure OpenAI：
+
+- 在 Azure OpenAI 資源（例如本課程使用的 `myaoaifordemo`）上，指派 **Cognitive Services OpenAI User** 角色給該 service principal，範圍限定在這個 Azure OpenAI 資源，不要開放到整個 Resource Group 或 Subscription。
+
+不需要建立或保存 Azure OpenAI API Key；Workflow 透過 `az account get-access-token --resource https://cognitiveservices.azure.com` 取得短期 Microsoft Entra ID 權杖，並以 Bearer token 呼叫 Chat Completions REST API。
+
+## GitHub Environment 設定
+
+沿用第一階段的 `demo` Environment，新增以下 Variables：
+
+| Variable | 內容 |
+| --- | --- |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI 資源的 Endpoint，例如 `https://myaoaifordemo.openai.azure.com/` |
+| `AZURE_OPENAI_DEPLOYMENT` | 要使用的模型 Deployment 名稱，例如 `gpt-6-luna` |
+
+這兩個值不是密碼，可視為一般設定；仍建議只放在 GitHub Environment Variables，不寫進程式碼或提交到 Repository。
+
+## Workflow 行為
+
+[`.github/workflows/ai-review.yml`](../.github/workflows/ai-review.yml) 會在 Pull Request 開啟、更新（synchronize）或重新開啟時執行，且只在來源分支屬於本 Repository（非外部 fork）時才會啟動，避免把 `demo` Environment 的設定暴露給不受信任的 fork PR。
+
+工作順序：
+
+1. 檢查必要的 Environment Variables 是否齊全。
+2. 取出這次 PR 相對於目標分支的差異，排除 `bin/`、`obj/` 與圖片檔案。
+3. 以正規表示式移除看起來像 API Key、Token、Secret 或密碼的內容，並將差異截斷在合理長度，避免外洩機密或超出模型與費用限制。
+4. 使用 `azure/login@v2` 透過 OIDC 登入 Azure，取得 Cognitive Services 範圍的存取權杖。
+5. 呼叫 Azure OpenAI Chat Completions API，請模型以繁體中文條列可能的邏輯錯誤、缺少的測試、敏感資訊外洩風險、不安全輸入處理與效能疑慮。
+6. 將審查結果整理成 Pull Request 留言；若同一個 PR 已有先前的審查留言，會更新既有留言而不是重複新增。
+7. 呼叫失敗或逾時時，會留言說明「自動審查失敗，請人工審查」，並讓 Workflow 視為完成，不會讓 PR 的其他檢查失敗。
+
+## 安全設計
+
+- 只讀取 diff，不會執行、模擬或匯入 PR 中的程式碼。
+- 傳送前先過濾常見的機密樣式（`sk-`、`ghp_`、`*KEY=`、`*SECRET=`、`*TOKEN=`、`*PASSWORD=`），降低機密外洩風險；仍建議學員與講師在 PR 中避免放入真實機密。
+- 送給模型的內容長度有上限，避免整個 Repository 或超大 diff 被整段送出。
+- AI 產生的內容只出現在 PR 留言，不會自動修改程式碼、不会自動核准或合併 PR。
+- Workflow 呼叫失敗不會讓 CI 或部署失敗，只會在留言中說明需要人工審查。
+
+## 尚待確認的 Azure 設定
+
+- 在 Azure OpenAI 資源 `myaoaifordemo` 上，將 **Cognitive Services OpenAI User** 角色指派給 `demo` Environment 使用的 service principal。
+- 確認課程使用的模型 Deployment 名稱（目前規劃為 `gpt-6-luna`）已經部署完成，且該 Deployment 支援 Chat Completions API。
+- 確認 `demo` Environment 已新增 `AZURE_OPENAI_ENDPOINT` 與 `AZURE_OPENAI_DEPLOYMENT` 兩個 Variables。
+
+這份文件與 Workflow 不會代為指派 Azure 角色或建立 Azure OpenAI Deployment。
+
+## 預演檢查
+
+- 建立一個小型 Pull Request，確認 Actions 出現 `Azure OpenAI PR review` 這個 workflow run。
+- 確認 PR 留言出現以 `🤖 Azure OpenAI 審查建議` 開頭的留言。
+- 再次 push 同一個 PR，確認留言是更新既有留言，而不是新增第二則留言。
+- 暫時把 `AZURE_OPENAI_DEPLOYMENT` 改成不存在的名稱，確認 Workflow 會留言「自動審查失敗，請人工審查」，且不影響 CI 測試結果。
+- 確認 Azure OpenAI 資源的存取記錄或計量中，能看到來自這個 Workflow 的呼叫。
