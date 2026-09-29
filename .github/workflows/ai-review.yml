@@ -1,0 +1,208 @@
+name: Azure OpenAI PR review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ai-review:
+    name: AI review of pull request diff
+    runs-on: ubuntu-latest
+    # 此 workflow 只使用預設分支版本，不 checkout 或執行 Pull Request 的程式碼。
+    # 這個 Environment 的 service principal 僅能呼叫 Azure OpenAI，不具部署權限。
+    environment: azure-openai-review
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
+
+    steps:
+      - name: Check required settings
+        shell: bash
+        run: |
+          missing=0
+          for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID \
+            AZURE_OPENAI_ENDPOINT AZURE_OPENAI_DEPLOYMENT; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::GitHub Environment azure-openai-review is missing variable: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Collect pull request diff
+        id: diff
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.clone_url }}
+        run: |
+          git fetch --no-tags --depth=1 "$HEAD_REPO" "$HEAD_SHA"
+
+          git diff "$BASE_SHA" "$HEAD_SHA" \
+            -- . ':(exclude)**/bin/**' ':(exclude)**/obj/**' \
+            ':(exclude)**/*.png' ':(exclude)**/*.jpg' ':(exclude)**/*.ico' \
+            > raw_diff.txt
+
+          # 移除看起來像機密的內容，避免把 Token、Key 或密碼送給模型。
+          sed -E \
+            -e 's/(sk-[A-Za-z0-9]{10,})/[REDACTED]/g' \
+            -e 's/(ghp_[A-Za-z0-9]{10,})/[REDACTED]/g' \
+            -e '/[A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*"?[[:space:]]*[:=]/I s/.*/[REDACTED]/' \
+            -e 's/([A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*)([^[:space:]]+)/\1[REDACTED]/gI' \
+            raw_diff.txt > clean_diff.txt
+
+          # 限制送給模型的內容大小，避免超出 token 限制或產生非預期費用。
+          head -c 12000 clean_diff.txt > diff_for_review.txt
+
+          if [[ -s diff_for_review.txt ]]; then
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Azure login with OIDC
+        if: steps.diff.outputs.has_diff == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Call Azure OpenAI for review
+        if: steps.diff.outputs.has_diff == 'true'
+        id: call-ai
+        shell: bash
+        run: |
+          token="$(az account get-access-token --resource https://cognitiveservices.azure.com --query accessToken -o tsv)"
+
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open("diff_for_review.txt", encoding="utf-8", errors="replace") as f:
+              diff = f.read()
+
+          payload = {
+              "messages": [
+                  {
+                      "role": "system",
+                      "content": (
+                          "你是資深 .NET 與 CI/CD 課程助教，負責審查 Pull Request 的程式碼差異。"
+                          "請使用繁體中文，以條列式回覆下列項目："
+                          "可能的邏輯錯誤、缺少的測試、可能的敏感資訊外洩、"
+                          "不安全的輸入處理、效能疑慮。"
+                          "沒有發現問題時請明確說明「未發現明顯問題」。"
+                          "只做靜態閱讀與建議，不要執行或模擬 diff 中的程式碼。"
+                      ),
+                  },
+                  {
+                      "role": "user",
+                      "content": (
+                          "以下是本次 Pull Request 的程式碼差異"
+                          "（已移除疑似機密內容，內容可能被截斷）：\n\n" + diff
+                      ),
+                  },
+              ],
+              "model": os.environ["AZURE_OPENAI_DEPLOYMENT"],
+              "max_completion_tokens": 4096,
+          }
+
+          with open("payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False)
+          PY
+
+          endpoint="${AZURE_OPENAI_ENDPOINT%/}"
+          url="${endpoint}/openai/v1/chat/completions"
+
+          status="$(curl -sS --max-time 120 -o response.json -w '%{http_code}' \
+            -X POST "$url" \
+            -H "Authorization: Bearer $token" \
+            -H "Content-Type: application/json" \
+            -d @payload.json)"
+
+          if [[ "$status" != "200" ]]; then
+            python3 - "$status" <<'PY'
+          import json
+          import re
+          import sys
+
+          with open("response.json", encoding="utf-8") as f:
+              response = json.load(f)
+          error = response.get("error") or {}
+          # Only report structured fields; the service's free-text message may
+          # contain fragments of the submitted PR diff.
+          code = re.sub(r"[^a-zA-Z0-9_.-]", "", str(error.get("code") or "unknown"))[:80]
+          param = re.sub(r"[^a-zA-Z0-9_.-]", "", str(error.get("param") or "unknown"))[:80]
+          print(f"::error::Azure OpenAI HTTP {sys.argv[1]} (code={code}, param={param})")
+          PY
+            exit 1
+          fi
+
+          python3 -c "
+          import json
+          with open('response.json', encoding='utf-8') as f:
+              data = json.load(f)
+          choice = data['choices'][0]
+          content = choice['message'].get('content')
+          if not content or choice['finish_reason'] != 'stop':
+              raise ValueError('Azure OpenAI did not return a complete review')
+          print(content)
+          " > review.md
+
+      - name: Post review comment
+        if: always() && steps.diff.outputs.has_diff == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- azure-openai-pr-review -->';
+            const succeeded = '${{ steps.call-ai.outcome }}' === 'success' && fs.existsSync('review.md');
+
+            const body = succeeded
+              ? `${marker}\n### 🤖 Azure OpenAI 審查建議\n\n${fs.readFileSync('review.md', 'utf8').trim()}\n\n---\n此建議由 Azure OpenAI 自動產生，僅供參考，請人工確認後再決定是否採用。`
+              : `${marker}\n### 🤖 Azure OpenAI 審查建議\n\n本次自動審查呼叫失敗或逾時，請人工審查此 Pull Request；不影響 CI 測試結果。`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Skip notice for empty diff
+        if: steps.diff.outputs.has_diff == 'false'
+        run: echo "沒有可審查的差異（可能只變更 bin/obj 或圖片），略過 AI 審查。"
