@@ -27,5 +27,8 @@ jobs:
       - name: Run tests
         run: dotnet test tests/AiCicdAzureLab.Api.Tests/AiCicdAzureLab.Api.Tests.csproj --configuration Release --no-restore
 
+      - name: Test AI review request
+        run: python3 -m unittest discover -s tests -p 'test_ai_review_workflow.py'
+
       - name: Build Docker image
         run: docker build --tag ai-cicd-azure-lab:$GITHUB_SHA .

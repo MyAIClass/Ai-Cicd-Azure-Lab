@@ -33,9 +33,9 @@ Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) �
 2. 取出這次 PR 相對於目標分支的差異，排除 `bin/`、`obj/` 與圖片檔案。
 3. 以正規表示式移除看起來像 API Key、Token、Secret 或密碼的內容，並將差異截斷在合理長度，避免外洩機密或超出模型與費用限制。
 4. 使用 `azure/login@v2` 透過 OIDC 登入 Azure，取得 Cognitive Services 範圍的存取權杖。
-5. 呼叫 Azure OpenAI Chat Completions API，請模型以繁體中文條列可能的邏輯錯誤、缺少的測試、敏感資訊外洩風險、不安全輸入處理與效能疑慮。
+5. 呼叫 Azure OpenAI v1 Chat Completions API，使用適用於推理模型的 `max_completion_tokens`，請模型以繁體中文條列可能的邏輯錯誤、缺少的測試、敏感資訊外洩風險、不安全輸入處理與效能疑慮。
 6. 將審查結果整理成 Pull Request 留言；若同一個 PR 已有先前的審查留言，會更新既有留言而不是重複新增。
-7. 呼叫失敗或逾時時，會留言說明「自動審查失敗，請人工審查」，並讓 Workflow 視為完成，不會讓 PR 的其他檢查失敗。
+7. 呼叫失敗或逾時時，會留言說明「自動審查失敗，請人工審查」，並讓 AI 審查檢查顯示失敗以提醒維護者；獨立的 .NET CI 檢查不受影響。Actions log 僅顯示 HTTP 狀態、錯誤代碼與參數，不公開可能含有 PR 內容的完整錯誤回應。
 
 ## 安全設計
 
@@ -58,5 +58,5 @@ Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) �
 - 建立一個小型 Pull Request，確認 Actions 出現 `Azure OpenAI PR review` 這個 workflow run。
 - 確認 PR 留言出現以 `🤖 Azure OpenAI 審查建議` 開頭的留言。
 - 再次 push 同一個 PR，確認留言是更新既有留言，而不是新增第二則留言。
-- 暫時把 `AZURE_OPENAI_DEPLOYMENT` 改成不存在的名稱，確認 Workflow 會留言「自動審查失敗，請人工審查」，且不影響 CI 測試結果。
+- 暫時把 `AZURE_OPENAI_DEPLOYMENT` 改成不存在的名稱，確認 Workflow 會留言「自動審查失敗，請人工審查」，AI 審查檢查標示失敗，且不影響獨立的 .NET CI 測試結果。測試後還原設定。
 - 確認 Azure OpenAI 資源的存取記錄或計量中，能看到來自這個 Workflow 的呼叫。
