@@ -65,6 +65,7 @@ jobs:
           sed -E \
             -e 's/(sk-[A-Za-z0-9]{10,})/[REDACTED]/g' \
             -e 's/(ghp_[A-Za-z0-9]{10,})/[REDACTED]/g' \
+            -e '/[A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*"?[[:space:]]*[:=]/I s/.*/[REDACTED]/' \
             -e 's/([A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*)([^[:space:]]+)/\1[REDACTED]/gI' \
             raw_diff.txt > clean_diff.txt
 
