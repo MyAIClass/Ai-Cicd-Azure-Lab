@@ -10,6 +10,15 @@ WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/ai-review.ym
 
 
 class AiReviewRequestTests(unittest.TestCase):
+    def test_workflow_uses_isolated_target_trigger_and_environment(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("pull_request_target:", workflow)
+        self.assertIn("environment: azure-openai-review", workflow)
+        self.assertNotIn("environment: demo", workflow)
+        self.assertIn('ref: ${{ github.event.pull_request.base.sha }}', workflow)
+        self.assertIn('git fetch --no-tags --depth=1 "$HEAD_REPO" "$HEAD_SHA"', workflow)
+
     def test_reasoning_model_request_uses_supported_parameters(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         start = "          python3 - <<'PY'\n"

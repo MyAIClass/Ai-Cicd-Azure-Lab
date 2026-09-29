@@ -2,19 +2,19 @@
 
 本階段讓 GitHub Actions 在 Pull Request 開啟或更新時，自動取得程式碼差異，透過 OIDC 登入 Azure 並呼叫 Azure OpenAI，將審查建議留言回 Pull Request。這個 Workflow **只提供建議，不會阻擋或自動核准合併**，也不會修改程式碼。
 
-## 沿用第一階段的 OIDC 設定
+## PR 審查專用的 OIDC 設定
 
-Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) 相同的 `demo` Environment 與 Microsoft Entra ID service principal，登入方式同樣是 OIDC，不新增任何長期金鑰。
+Workflow 使用獨立的 `azure-openai-review` Environment 與 Microsoft Entra ID service principal，登入方式同樣是 OIDC，不新增任何長期金鑰。這個 service principal 只授予 Azure OpenAI 資源的呼叫權限，不得使用部署用的 ACR 或 Container Apps 權限。
 
-在既有的 Federated Credential 與角色指派之外，這個階段需要額外授權，讓同一個 service principal 可以呼叫 Azure OpenAI：
+請為這個 service principal 建立只允許 `pull_request_target` workflow 使用的 Federated Credential，並授予它呼叫 Azure OpenAI 的權限：
 
-- 在 Azure OpenAI 資源（例如本課程使用的 `myaoaifordemo`）上，指派 **Cognitive Services OpenAI User** 角色給該 service principal，範圍限定在這個 Azure OpenAI 資源，不要開放到整個 Resource Group 或 Subscription。
+- 在 Azure OpenAI 資源（例如本課程使用的 `myaoaifordemo`）上，指派 **Cognitive Services OpenAI User** 角色給該 service principal，範圍限定在這個 Azure OpenAI 資源，不要開放到整個 Resource Group 或 Subscription；不要將部署用的 `demo` service principal 權限授予它。
 
 不需要建立或保存 Azure OpenAI API Key；Workflow 透過 `az account get-access-token --resource https://cognitiveservices.azure.com` 取得短期 Microsoft Entra ID 權杖，並以 Bearer token 呼叫 Chat Completions REST API。
 
 ## GitHub Environment 設定
 
-沿用第一階段的 `demo` Environment，新增以下 Variables：
+在 `azure-openai-review` Environment 新增以下 Variables：
 
 | Variable | 內容 |
 | --- | --- |
@@ -25,7 +25,7 @@ Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) �
 
 ## Workflow 行為
 
-[`.github/workflows/ai-review.yml`](../.github/workflows/ai-review.yml) 會在 Pull Request 開啟、更新（synchronize）或重新開啟時執行，且只在來源分支屬於本 Repository（非外部 fork）時才會啟動，避免把 `demo` Environment 的設定暴露給不受信任的 fork PR。
+[`.github/workflows/ai-review.yml`](../.github/workflows/ai-review.yml) 使用 `pull_request_target`，在預設分支的 workflow 內容中執行，因此 Pull Request 不能藉由修改 workflow 取得權限。它只讀取 diff，不 checkout 或執行 Pull Request 的程式碼；外部 fork 也能安全取得審查結果。
 
 工作順序：
 
@@ -47,9 +47,9 @@ Workflow 使用與 [`azure-deploy.yml`](../.github/workflows/azure-deploy.yml) �
 
 ## 尚待確認的 Azure 設定
 
-- 在 Azure OpenAI 資源 `myaoaifordemo` 上，將 **Cognitive Services OpenAI User** 角色指派給 `demo` Environment 使用的 service principal。
+- 在 Azure OpenAI 資源 `myaoaifordemo` 上，將 **Cognitive Services OpenAI User** 角色指派給 `azure-openai-review` Environment 使用的 service principal。
 - 確認課程使用的模型 Deployment 名稱（目前規劃為 `gpt-6-luna`）已經部署完成，且該 Deployment 支援 Chat Completions API。
-- 確認 `demo` Environment 已新增 `AZURE_OPENAI_ENDPOINT` 與 `AZURE_OPENAI_DEPLOYMENT` 兩個 Variables。
+- 確認 `azure-openai-review` Environment 已新增 `AZURE_OPENAI_ENDPOINT` 與 `AZURE_OPENAI_DEPLOYMENT` 兩個 Variables，且其 service principal 沒有部署權限。
 
 這份文件與 Workflow 不會代為指派 Azure 角色或建立 Azure OpenAI Deployment。
 

@@ -1,7 +1,7 @@
 name: Azure OpenAI PR review
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 concurrency:
@@ -11,11 +11,10 @@ concurrency:
 jobs:
   ai-review:
     name: AI review of pull request diff
-    # 只在同一個 Repository 內的分支觸發，避免把 demo Environment 的
-    # OIDC 設定與 Azure OpenAI 端點暴露給外部 fork 的 Pull Request。
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    environment: demo
+    # 此 workflow 只使用預設分支版本，不 checkout 或執行 Pull Request 的程式碼。
+    # 這個 Environment 的 service principal 僅能呼叫 Azure OpenAI，不具部署權限。
+    environment: azure-openai-review
     permissions:
       contents: read
       pull-requests: write
@@ -35,7 +34,7 @@ jobs:
           for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID \
             AZURE_OPENAI_ENDPOINT AZURE_OPENAI_DEPLOYMENT; do
             if [[ -z "${!name}" ]]; then
-              echo "::error::GitHub Environment demo is missing variable: $name"
+              echo "::error::GitHub Environment azure-openai-review is missing variable: $name"
               missing=1
             fi
           done
@@ -44,16 +43,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
 
       - name: Collect pull request diff
         id: diff
         shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.clone_url }}
         run: |
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          head_sha="${{ github.event.pull_request.head.sha }}"
+          git fetch --no-tags --depth=1 "$HEAD_REPO" "$HEAD_SHA"
 
-          git diff "$base_sha" "$head_sha" \
+          git diff "$BASE_SHA" "$HEAD_SHA" \
             -- . ':(exclude)**/bin/**' ':(exclude)**/obj/**' \
             ':(exclude)**/*.png' ':(exclude)**/*.jpg' ':(exclude)**/*.ico' \
             > raw_diff.txt
