@@ -42,7 +42,7 @@ Workflow 使用獨立的 `azure-openai-review` Environment 與 Microsoft Entra I
 - 只讀取 diff，不會執行、模擬或匯入 PR 中的程式碼。
 - 傳送前先過濾常見的機密樣式（`sk-`、`ghp_`、`*KEY=`、`*SECRET=`、`*TOKEN=`、`*PASSWORD=`），降低機密外洩風險；仍建議學員與講師在 PR 中避免放入真實機密。
 - 送給模型的內容長度有上限，避免整個 Repository 或超大 diff 被整段送出。
-- AI 產生的內容只出現在 PR 留言，不會自動修改程式碼、不会自動核准或合併 PR。
+- AI 產生的內容只出現在 PR 留言，不會自動修改程式碼、不會自動核准或合併 PR。
 - Workflow 呼叫失敗不會讓 CI 或部署失敗，只會在留言中說明需要人工審查。
 
 ## 尚待確認的 Azure 設定
