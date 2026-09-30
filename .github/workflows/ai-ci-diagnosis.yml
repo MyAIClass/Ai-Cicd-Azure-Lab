@@ -47,12 +47,12 @@ jobs:
       - name: Collect and sanitize failed logs
         shell: bash
         run: |
-          gh run view "$RUN_ID" --log-failed > raw_ci_log.txt
+          gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > raw_ci_log.txt
 
           sed -E \
             -e 's/(sk-[A-Za-z0-9]{10,})/[REDACTED]/g' \
             -e 's/(gh[ps]_[A-Za-z0-9]{10,})/[REDACTED]/g' \
-            -e 's/(Authorization:[[:space:]]*)([^[:space:]]+)/\1[REDACTED]/Ig' \
+            -e 's/(Authorization:[[:space:]]*)(.*)/\1[REDACTED]/Ig' \
             -e 's/(Cookie:[[:space:]]*)(.*)/\1[REDACTED]/Ig' \
             -e '/[A-Za-z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Za-z0-9_]*"?[[:space:]]*[:=]/I s/.*/[REDACTED]/' \
             raw_ci_log.txt > clean_ci_log.txt
