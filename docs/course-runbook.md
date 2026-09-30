@@ -259,7 +259,7 @@ docker build --no-cache -t ai-cicd-azure-lab .
 3. 若建議提到缺少測試或潛在問題，讓學員決定是否修改程式碼或測試後重新 push；重新 push 後留言會更新，不會重複新增。
 4. 強調此留言只是建議：若 AI 誤判或建議不合理，以人工判斷與既有 CI 結果為準。
 
-CI 失敗或 Docker log 的診斷，目前仍以下列人工流程為主（尚未自動化）：
+`.NET CI` 失敗時，`.github/workflows/ai-ci-diagnosis.yml` 會在失敗後自動擷取已遮罩且截斷的失敗日誌，產生 AI 診斷留言回相關 PR。設定與預演方式請見 [azure-openai-ci-diagnosis.md](azure-openai-ci-diagnosis.md)。AI 診斷不會修正程式碼或改變 CI 結果，以下人工流程仍是判斷與修正的必要步驟：
 
 建議流程：
 
