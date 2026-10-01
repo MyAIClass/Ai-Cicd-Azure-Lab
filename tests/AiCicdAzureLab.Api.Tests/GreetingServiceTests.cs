@@ -11,7 +11,7 @@ public class GreetingServiceTests
         var response = GreetingService.Create(" ");
 
         Assert.Equal("你好，課程學員！", response.Message);
-        Assert.Equal("ai-cicd-azure-lab", response.Service);
+        Assert.Equal("ai-cicd-azure-lab-demo", response.Service);
     }
 
     [Fact]
