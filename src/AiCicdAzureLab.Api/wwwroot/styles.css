@@ -59,29 +59,31 @@ h1 {
   gap: 10px;
 }
 
-.captcha-section {
-  margin-top: 18px;
+input, button {
+  min-height: 44px;
+  border-radius: 8px;
+  font: inherit;
+}
+
+label {
+  display: block;
+  margin: 16px 0 8px;
+  font-weight: 600;
 }
 
 .captcha-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 8px 0 10px;
+  margin-bottom: 10px;
 }
 
-.captcha-image {
+.captcha-row .captcha-image {
   width: 220px;
   height: 72px;
   border: 1px solid #b8c7d8;
   border-radius: 8px;
   background: #f3f7fb;
-}
-
-input, button {
-  min-height: 44px;
-  border-radius: 8px;
-  font: inherit;
 }
 
 input {
@@ -101,6 +103,11 @@ button {
 
 button:hover {
   background: #005a9e;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .result {
@@ -157,7 +164,7 @@ button:hover {
   }
 
   .captcha-row {
-    align-items: stretch;
+    align-items: flex-start;
     flex-direction: column;
   }
 }

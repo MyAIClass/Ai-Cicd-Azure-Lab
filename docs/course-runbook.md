@@ -87,9 +87,10 @@ dotnet test tests/AiCicdAzureLab.Api.Tests/AiCicdAzureLab.Api.Tests.csproj --no-
 
 | 檔案 | 說明 |
 | --- | --- |
-| src/AiCicdAzureLab.Api/Program.cs | 註冊 static files，並定義 /health 與 /api/greeting |
+| src/AiCicdAzureLab.Api/Program.cs | 註冊 static files，並定義 /health、CAPTCHA 與 /api/greeting |
+| src/AiCicdAzureLab.Api/Services/CaptchaService.cs | 產生、顯示與一次性驗證動態 SVG 驗證碼 |
 | src/AiCicdAzureLab.Api/Services/GreetingService.cs | 封裝問候訊息的商業邏輯 |
-| tests/AiCicdAzureLab.Api.Tests/GreetingServiceTests.cs | 驗證空白名稱與自訂名稱 |
+| tests/AiCicdAzureLab.Api.Tests/ | 驗證 CAPTCHA、API 與問候訊息行為 |
 | Dockerfile | 建立 .NET publish image，並以 port 8080 啟動 |
 | .github/workflows/ci.yml | 在 push/PR 執行 restore、test 與 Docker build |
 | .github/workflow-templates/azure-deploy.yml | 課堂閱讀／跨 Repository 示範範本；不會由此 Repository 執行 |
@@ -119,16 +120,15 @@ dotnet run --project src/AiCicdAzureLab.Api/AiCicdAzureLab.Api.csproj
 
 ~~~powershell
 Invoke-RestMethod http://localhost:5000/health
-Invoke-RestMethod "http://localhost:5000/api/greeting?name=小明"
 ~~~
 
 預期可看到：
 
 - /health 回傳 status 為 ok。
-- /api/greeting?name=小明 回傳包含「你好，小明！」、服務名稱與 UTC timestamp 的 JSON。
+- 開啟 / 可看到驗證圖與問候表單；輸入正確驗證文字後，頁面會顯示包含「你好，小明！」、服務名稱與 UTC timestamp 的 JSON 內容。
 - 開啟 / 可看到前端頁面，前端會呼叫同一個 API。
 
-若實際連接埠不是 5000，以 dotnet run 輸出的網址為準。讓學員觀察 GreetingService.Create 如何處理 null、空白字串與前後空白。
+若實際連接埠不是 5000，以 dotnet run 輸出的網址為準。讓學員觀察 CAPTCHA 換圖、錯誤答案重新換發，以及 GreetingService.Create 如何處理空白字串與前後空白。
 
 ### 3. 修改 API 並補測試（50 分鐘）
 
@@ -144,8 +144,9 @@ Invoke-RestMethod "http://localhost:5000/api/greeting?name=小明"
 
 ~~~powershell
 dotnet test tests/AiCicdAzureLab.Api.Tests/AiCicdAzureLab.Api.Tests.csproj
-Invoke-RestMethod "http://localhost:5000/api/greeting?name=  小明  "
 ~~~
+
+請改由首頁輸入驗證圖文字後送出；直接呼叫 `POST /api/greeting` 時，必須在 JSON body 提供 `name`、`captchaToken` 與 `captchaAnswer`。
 
 課堂提醒：只修改前端文字而沒有更新 API 測試，不能算完整的行為變更；反之，若只改測試來配合錯誤實作，也不能算修正。測試、程式碼與手動驗證三者要互相一致。
 
@@ -209,8 +210,9 @@ docker run --rm --name ai-cicd-lab -p 8080:8080 ai-cicd-azure-lab
 
 ~~~powershell
 Invoke-RestMethod http://localhost:8080/health
-Invoke-RestMethod "http://localhost:8080/api/greeting?name=Docker"
 ~~~
+
+開啟 `http://localhost:8080/`，輸入驗證圖文字後再測試問候功能。
 
 講師可示範以下診斷指令：
 

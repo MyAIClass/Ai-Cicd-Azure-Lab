@@ -26,8 +26,10 @@ GitHub Push / Pull Request
 應用程式本身包含：
 
 - GET /health：健康檢查
-- GET /api/captcha：取得 SVG 圖形驗證碼
-- POST /api/greeting：通過驗證碼後的 C# 問候 API
+- GET /api/captcha：取得一次性驗證碼資訊
+- GET /api/captcha/{token}/image：取得驗證圖 SVG
+- POST /api/greeting：驗證碼正確後呼叫 C# API
+- GET /api/daily-quote：取得今日小語
 - /：HTML 與 JavaScript 前端
 
 ## 專案結構
@@ -42,6 +44,7 @@ GitHub Push / Pull Request
     │     └─ azure-deploy.yml
     ├─ src/
     │  └─ AiCicdAzureLab.Api/
+    │     ├─ Services/CaptchaService.cs
     │     ├─ Services/GreetingService.cs
     │     ├─ Program.cs
     │     ├─ AiCicdAzureLab.Api.csproj
@@ -76,14 +79,15 @@ Windows PowerShell：
 
 - http://localhost:5000/
 - http://localhost:5000/health
+- 首頁會自動取得驗證圖；輸入圖片中的文字後，按「驗證並送出」呼叫 API。
 
 實際連接埠可能依 .NET 開發環境設定而不同。
 
 ## 圖形驗證碼
 
-首頁的問候功能使用自製 SVG 圖形驗證碼。`GET /api/captcha` 會產生一組 5 碼英數文字與對應圖片；前端必須在 `POST /api/greeting` 的 JSON 內容送出 `name`、`captchaId` 與 `captchaAnswer` 才能取得問候結果。
+首頁的問候功能使用自製 SVG 圖形驗證碼。`GET /api/captcha` 會產生一次性驗證碼資訊，圖片則由 `GET /api/captcha/{token}/image` 動態產生；前端必須在 `POST /api/greeting` 的 JSON 內容送出 `name`、`captchaToken` 與 `captchaAnswer` 才能取得問候結果。
 
-驗證碼不分大小寫、有效期限為 5 分鐘，答對後立即失效；同一張圖片最多可輸入錯誤 3 次，按下「換一張」也會立即使舊圖片失效。答案只保存在單一服務執行個體的記憶體中，因此這是課程示範與基本防護用途，不適合多副本部署或高強度反機器人需求。
+驗證碼不分大小寫，有效期限為 5 分鐘，成功或答錯一次後即失效；名稱長度上限為 50 個字元。答案只保存在單一服務執行個體的記憶體中，因此這是課程示範用的簡易防機器人機制，不是正式 CAPTCHA、WAF 或 Rate Limiting 的替代方案。
 
 ## 使用 Docker 執行
 

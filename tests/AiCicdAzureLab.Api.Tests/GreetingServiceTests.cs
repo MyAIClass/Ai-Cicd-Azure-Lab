@@ -21,4 +21,12 @@ public class GreetingServiceTests
 
         Assert.Equal("你好，小明！", response.Message);
     }
+
+    [Fact]
+    public void IsValidName_rejects_names_longer_than_fifty_characters()
+    {
+        var name = new string('甲', GreetingService.MaxNameLength + 1);
+
+        Assert.False(GreetingService.IsValidName(name));
+    }
 }

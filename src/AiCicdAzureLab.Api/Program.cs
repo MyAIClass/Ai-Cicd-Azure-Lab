@@ -16,29 +16,52 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("Health")
     .WithTags("System");
 
-app.MapGet("/api/captcha", (Guid? previousCaptchaId, CaptchaService captchaService) =>
+app.MapPost("/api/greeting", (GreetingRequest? request, CaptchaService captchaService) =>
 {
-    if (previousCaptchaId.HasValue)
+    if (request is null)
     {
-        captchaService.Invalidate(previousCaptchaId.Value);
+        return Results.BadRequest(new { error = "請提供完整的請求內容。" });
     }
 
-    return Results.Ok(captchaService.Create());
-})
-    .WithName("Captcha")
-    .WithTags("Demo");
-
-app.MapPost("/api/greeting", (GreetingRequest request, CaptchaService captchaService) =>
-{
-    if (!captchaService.Verify(request.CaptchaId, request.CaptchaAnswer))
+    if (!GreetingService.IsValidName(request.Name))
     {
-        return Results.BadRequest(new { error = "驗證碼無效、已過期或嘗試次數已用盡。" });
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["name"] = [$"名稱長度不可超過 {GreetingService.MaxNameLength} 個字元。"]
+        });
+    }
+
+    if (!captchaService.ValidateAndConsume(request.CaptchaToken, request.CaptchaAnswer))
+    {
+        return Results.BadRequest(new { error = "驗證碼錯誤或已過期，請重新取得驗證碼。" });
     }
 
     return Results.Ok(GreetingService.Create(request.Name));
 })
     .WithName("Greeting")
     .WithTags("Demo");
+
+app.MapGet("/api/greeting", () => Results.StatusCode(StatusCodes.Status405MethodNotAllowed))
+    .ExcludeFromDescription();
+
+app.MapGet("/api/captcha", (CaptchaService captchaService) =>
+    Results.Ok(captchaService.Create()))
+    .WithName("CreateCaptcha")
+    .WithTags("Security");
+
+app.MapGet("/api/captcha/{token}/image", (string token, CaptchaService captchaService) =>
+{
+    try
+    {
+        return Results.Content(captchaService.RenderImage(token), "image/svg+xml");
+    }
+    catch (KeyNotFoundException)
+    {
+        return Results.NotFound();
+    }
+})
+    .WithName("CaptchaImage")
+    .WithTags("Security");
 
 app.MapGet("/api/challenge", () =>
     Results.Ok(ChallengeService.Draw()))
@@ -56,4 +79,7 @@ app.Run();
 
 public partial class Program;
 
-public sealed record GreetingRequest(string? Name, Guid CaptchaId, string? CaptchaAnswer);
+public sealed record GreetingRequest(
+    string? Name,
+    string? CaptchaToken,
+    string? CaptchaAnswer);

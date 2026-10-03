@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using AiCicdAzureLab.Api.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Xunit;
@@ -8,70 +7,57 @@ namespace AiCicdAzureLab.Api.Tests;
 public class CaptchaServiceTests
 {
     [Fact]
-    public void Create_generates_five_allowed_characters_and_svg()
+    public void Create_returns_a_token_and_an_svg_without_plain_text_answer()
     {
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        var service = new CaptchaService(cache);
+        var service = CreateService(() => "ABCDE");
 
         var challenge = service.Create();
-        var answer = ExtractAnswer(challenge.ImageSvg);
+        var image = service.RenderImage(challenge.Token);
 
-        Assert.Matches("^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$", answer);
-        Assert.Contains("<svg", challenge.ImageSvg);
-        Assert.Contains("<text", challenge.ImageSvg);
+        Assert.False(string.IsNullOrWhiteSpace(challenge.Token));
+        Assert.Contains($"/api/captcha/{challenge.Token}/image", challenge.ImageUrl);
+        Assert.StartsWith("<svg", image);
+        Assert.Contains("<rect", image);
+        Assert.DoesNotContain("<text", image, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ABCDE", image, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Verify_accepts_case_insensitive_answer_once()
+    public void ValidateAndConsume_accepts_case_insensitive_answer_only_once()
     {
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        var service = new CaptchaService(cache);
+        var service = CreateService(() => "ABCDE");
         var challenge = service.Create();
 
-        Assert.True(service.Verify(challenge.CaptchaId, ExtractAnswer(challenge.ImageSvg).ToLowerInvariant()));
-        Assert.False(service.Verify(challenge.CaptchaId, ExtractAnswer(challenge.ImageSvg)));
+        Assert.True(service.ValidateAndConsume(challenge.Token, "abcde"));
+        Assert.False(service.ValidateAndConsume(challenge.Token, "abcde"));
     }
 
     [Fact]
-    public void Verify_invalidates_challenge_after_three_failed_attempts()
+    public void ValidateAndConsume_rejects_wrong_answer_and_consumes_the_challenge()
     {
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        var service = new CaptchaService(cache);
+        var service = CreateService(() => "ABCDE");
         var challenge = service.Create();
 
-        Assert.False(service.Verify(challenge.CaptchaId, "WRONG"));
-        Assert.False(service.Verify(challenge.CaptchaId, "WRONG"));
-        Assert.False(service.Verify(challenge.CaptchaId, "WRONG"));
-        Assert.False(service.Verify(challenge.CaptchaId, ExtractAnswer(challenge.ImageSvg)));
+        Assert.False(service.ValidateAndConsume(challenge.Token, "WRONG"));
+        Assert.False(service.ValidateAndConsume(challenge.Token, "ABCDE"));
     }
 
     [Fact]
-    public void Verify_rejects_expired_and_invalidated_challenges()
+    public async Task Expired_challenge_cannot_be_validated_or_rendered()
     {
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        var clock = new TestTimeProvider(DateTimeOffset.Parse("2026-10-03T00:00:00Z"));
-        var service = new CaptchaService(cache, clock);
-        var expiredChallenge = service.Create();
-        var expiredAnswer = ExtractAnswer(expiredChallenge.ImageSvg);
+        var service = CreateService(() => "ABCDE", TimeSpan.FromMilliseconds(50));
+        var challenge = service.Create();
+        await Task.Delay(150);
 
-        clock.Advance(TimeSpan.FromMinutes(5));
-        Assert.False(service.Verify(expiredChallenge.CaptchaId, expiredAnswer));
-
-        var invalidatedChallenge = service.Create();
-        service.Invalidate(invalidatedChallenge.CaptchaId);
-        Assert.False(service.Verify(invalidatedChallenge.CaptchaId, ExtractAnswer(invalidatedChallenge.ImageSvg)));
+        Assert.False(service.ValidateAndConsume(challenge.Token, "ABCDE"));
+        Assert.Throws<KeyNotFoundException>(() => service.RenderImage(challenge.Token));
     }
 
-    private static string ExtractAnswer(string imageSvg) =>
-        string.Concat(Regex.Matches(imageSvg, "<text[^>]*>([A-Z0-9])</text>")
-            .Select(match => match.Groups[1].Value));
-
-    private sealed class TestTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        private DateTimeOffset current = now;
-
-        public override DateTimeOffset GetUtcNow() => current;
-
-        public void Advance(TimeSpan duration) => current = current.Add(duration);
-    }
+    private static CaptchaService CreateService(
+        Func<string> codeGenerator,
+        TimeSpan? lifetime = null) =>
+        new(
+            new MemoryCache(new MemoryCacheOptions()),
+            codeGenerator,
+            lifetime ?? CaptchaService.DefaultLifetime);
 }

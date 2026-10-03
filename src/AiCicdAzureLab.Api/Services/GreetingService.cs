@@ -7,6 +7,11 @@ public sealed record GreetingResponse(
 
 public static class GreetingService
 {
+    public const int MaxNameLength = 50;
+
+    public static bool IsValidName(string? name) =>
+        string.IsNullOrWhiteSpace(name) || name.Trim().Length <= MaxNameLength;
+
     public static GreetingResponse Create(string? name)
     {
         var displayName = string.IsNullOrWhiteSpace(name)
