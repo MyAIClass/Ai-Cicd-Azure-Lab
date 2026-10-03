@@ -1,6 +1,7 @@
 const greetingForm = document.querySelector("#greeting-form");
 const nameInput = document.querySelector("#name");
 const result = document.querySelector("#result");
+const dailyQuote = document.querySelector("#daily-quote");
 const healthStatus = document.querySelector("#health-status");
 const statusBadge = document.querySelector("#status-badge");
 
@@ -39,6 +40,22 @@ async function checkHealth() {
 }
 
 checkHealth();
+
+async function loadDailyQuote() {
+  try {
+    const response = await fetch("/api/daily-quote");
+    if (!response.ok) {
+      throw new Error("Daily Quote API 回應 " + response.status);
+    }
+
+    const data = await response.json();
+    dailyQuote.textContent = data.quote;
+  } catch (error) {
+    dailyQuote.textContent = "今日小語載入失敗：" + error.message;
+  }
+}
+
+loadDailyQuote();
 
 const challengeButton = document.querySelector("#challenge-button");
 const challengeResult = document.querySelector("#challenge-result");

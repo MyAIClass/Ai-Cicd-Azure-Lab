@@ -91,6 +91,17 @@ button:hover {
   color: #344054;
 }
 
+.quote-card {
+  background: linear-gradient(135deg, #fff8e7, #ffffff);
+}
+
+.daily-quote {
+  margin-bottom: 0;
+  color: #8a4b08;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
 .status-card {
   display: flex;
   align-items: center;
