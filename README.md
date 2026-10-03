@@ -32,6 +32,14 @@ GitHub Push / Pull Request
 - GET /api/daily-quote：取得今日小語
 - /：HTML 與 JavaScript 前端
 
+前端目前採用豆沙色主題，主要色票定義於 `src/AiCicdAzureLab.Api/wwwroot/styles.css`：
+
+- 頁面背景：`#F4E7E4`
+- 按鈕與強調色：`#B76E79`
+- 按鈕 hover：`#9E5963`
+- 卡片背景：`#FFF9F7`
+- 主要文字：`#4A3636`
+
 ## 專案結構
 
     ai-cicd-azure-lab/
