@@ -8,7 +8,16 @@ const captchaImage = document.querySelector("#captcha-image");
 const captchaAnswer = document.querySelector("#captcha-answer");
 const captchaRefresh = document.querySelector("#refresh-captcha");
 const greetingSubmit = greetingForm.querySelector('button[type="submit"]');
+const loginButton = document.querySelector("#login-button");
+const loginStatus = document.querySelector("#login-status");
 let captchaToken = "";
+
+loginButton.addEventListener("click", () => {
+  const isLoggedIn = loginButton.getAttribute("aria-pressed") === "true";
+  loginButton.setAttribute("aria-pressed", String(!isLoggedIn));
+  loginButton.textContent = isLoggedIn ? "Login" : "Logout";
+  loginStatus.textContent = isLoggedIn ? "尚未登入" : "已登入（示範模式）";
+});
 
 async function loadCaptcha() {
   captchaRefresh.disabled = true;

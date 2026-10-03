@@ -9,9 +9,13 @@
 <body>
   <main class="container">
     <section class="hero">
-      <p class="eyebrow">GitHub Actions × Azure</p>
+      <div class="hero-header">
+        <p class="eyebrow">GitHub Actions × Azure</p>
+        <button id="login-button" type="button" aria-pressed="false">Login</button>
+      </div>
       <h1>AI CI/CD Azure Lab</h1>
       <p>以 HTML、JavaScript 與 C# API 示範從 Pull Request 到雲端部署的流程。</p>
+      <output id="login-status" class="login-status" aria-live="polite">尚未登入</output>
     </section>
 
     <section class="card">
@@ -26,6 +30,7 @@
           <div class="captcha-row">
             <img id="captcha-image" class="captcha-image" alt="圖形驗證碼載入中" width="220" height="72">
             <button id="refresh-captcha" type="button">換一張</button>
+            <button type="submit">登入</button>
           </div>
           <input id="captcha-answer" name="captcha-answer" maxlength="5" autocomplete="off" autocapitalize="characters" required>
         </div>

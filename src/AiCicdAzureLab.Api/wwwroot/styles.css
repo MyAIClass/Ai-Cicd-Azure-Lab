@@ -23,6 +23,13 @@ body {
   margin-bottom: 24px;
 }
 
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #0067b8;
@@ -43,6 +50,12 @@ h1 {
 .hero p:last-child {
   color: #526070;
   font-size: 1.1rem;
+}
+
+.login-status {
+  display: block;
+  margin-top: 10px;
+  color: #526070;
 }
 
 .card {
@@ -76,6 +89,10 @@ label {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.captcha-row button[type="submit"] {
+  margin-left: auto;
 }
 
 .captcha-row .captcha-image {
