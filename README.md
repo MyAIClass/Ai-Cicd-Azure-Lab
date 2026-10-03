@@ -26,7 +26,8 @@ GitHub Push / Pull Request
 應用程式本身包含：
 
 - GET /health：健康檢查
-- GET /api/greeting?name=小明：C# API
+- GET /api/captcha：取得 SVG 圖形驗證碼
+- POST /api/greeting：通過驗證碼後的 C# 問候 API
 - /：HTML 與 JavaScript 前端
 
 ## 專案結構
@@ -75,9 +76,14 @@ Windows PowerShell：
 
 - http://localhost:5000/
 - http://localhost:5000/health
-- http://localhost:5000/api/greeting?name=小明
 
 實際連接埠可能依 .NET 開發環境設定而不同。
+
+## 圖形驗證碼
+
+首頁的問候功能使用自製 SVG 圖形驗證碼。`GET /api/captcha` 會產生一組 5 碼英數文字與對應圖片；前端必須在 `POST /api/greeting` 的 JSON 內容送出 `name`、`captchaId` 與 `captchaAnswer` 才能取得問候結果。
+
+驗證碼不分大小寫、有效期限為 5 分鐘，答對後立即失效；同一張圖片最多可輸入錯誤 3 次，按下「換一張」也會立即使舊圖片失效。答案只保存在單一服務執行個體的記憶體中，因此這是課程示範與基本防護用途，不適合多副本部署或高強度反機器人需求。
 
 ## 使用 Docker 執行
 
