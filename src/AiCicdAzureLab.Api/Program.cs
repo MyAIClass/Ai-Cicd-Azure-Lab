@@ -68,6 +68,11 @@ app.MapGet("/api/challenge", () =>
     .WithName("Challenge")
     .WithTags("Demo");
 
+app.MapGet("/api/daily-quote", () =>
+    Results.Ok(DailyQuoteService.Create(DateOnly.FromDateTime(DateTime.UtcNow))))
+    .WithName("DailyQuote")
+    .WithTags("Demo");
+
 app.MapFallbackToFile("index.html");
 
 app.Run();

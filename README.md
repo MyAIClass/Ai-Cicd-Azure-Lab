@@ -29,6 +29,7 @@ GitHub Push / Pull Request
 - GET /api/captcha：取得一次性驗證碼資訊
 - GET /api/captcha/{token}/image：取得驗證圖 SVG
 - POST /api/greeting：驗證碼正確後呼叫 C# API
+- GET /api/daily-quote：取得今日小語
 - /：HTML 與 JavaScript 前端
 
 ## 專案結構
@@ -82,7 +83,11 @@ Windows PowerShell：
 
 實際連接埠可能依 .NET 開發環境設定而不同。
 
-問候 API 使用 `POST /api/greeting`，請求內容包含 `name`、`captchaToken` 與 `captchaAnswer`。驗證碼在伺服器記憶體中保存 5 分鐘，成功或答錯一次後即失效；名稱長度上限為 50 個字元。這是課程示範用的簡易防機器人機制，適合單一服務執行個體，不是正式 CAPTCHA、WAF 或 Rate Limiting 的替代方案。
+## 圖形驗證碼
+
+首頁的問候功能使用自製 SVG 圖形驗證碼。`GET /api/captcha` 會產生一次性驗證碼資訊，圖片則由 `GET /api/captcha/{token}/image` 動態產生；前端必須在 `POST /api/greeting` 的 JSON 內容送出 `name`、`captchaToken` 與 `captchaAnswer` 才能取得問候結果。
+
+驗證碼不分大小寫，有效期限為 5 分鐘，成功或答錯一次後即失效；名稱長度上限為 50 個字元。答案只保存在單一服務執行個體的記憶體中，因此這是課程示範用的簡易防機器人機制，不是正式 CAPTCHA、WAF 或 Rate Limiting 的替代方案。
 
 ## 使用 Docker 執行
 

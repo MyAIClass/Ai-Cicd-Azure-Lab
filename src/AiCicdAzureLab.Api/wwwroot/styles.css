@@ -78,12 +78,12 @@ label {
   margin-bottom: 10px;
 }
 
-.captcha-row img {
-  width: 260px;
-  height: 90px;
+.captcha-row .captcha-image {
+  width: 220px;
+  height: 72px;
   border: 1px solid #b8c7d8;
   border-radius: 8px;
-  background: #f3f4f6;
+  background: #f3f7fb;
 }
 
 input {
@@ -115,6 +115,17 @@ button:disabled {
   min-height: 24px;
   margin-top: 18px;
   color: #344054;
+}
+
+.quote-card {
+  background: linear-gradient(135deg, #fff8e7, #ffffff);
+}
+
+.daily-quote {
+  margin-bottom: 0;
+  color: #8a4b08;
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
 .status-card {

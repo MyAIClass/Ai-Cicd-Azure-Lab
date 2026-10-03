@@ -21,14 +21,13 @@
         <div class="form-row">
           <input id="name" name="name" maxlength="50" placeholder="例如：小明" value="課程學員" required>
         </div>
-        <label for="captcha-answer">驗證碼</label>
-        <div class="captcha-row">
-          <img id="captcha-image" alt="驗證碼圖片，請輸入圖片中的英數字" width="260" height="90">
-          <button id="captcha-refresh" type="button">換一張</button>
-        </div>
-        <div class="form-row">
-          <input id="captcha-answer" name="captcha-answer" maxlength="5" autocomplete="off" spellcheck="false" required placeholder="請輸入圖片中的文字">
-          <button id="greeting-submit" type="submit">驗證並送出</button>
+        <div class="captcha-section">
+          <label for="captcha-answer">請輸入圖片中的文字</label>
+          <div class="captcha-row">
+            <img id="captcha-image" class="captcha-image" alt="圖形驗證碼載入中" width="220" height="72">
+            <button id="refresh-captcha" type="button">換一張</button>
+          </div>
+          <input id="captcha-answer" name="captcha-answer" maxlength="5" autocomplete="off" autocapitalize="characters" required>
         </div>
       </form>
       <output id="result" class="result" aria-live="polite">尚未呼叫 API</output>
@@ -41,6 +40,11 @@
       <output id="challenge-result" class="result" aria-live="polite">
         還沒有抽取任務
       </output>
+    </section>
+
+    <section class="card quote-card">
+      <h2>今日小語</h2>
+      <p id="daily-quote" class="daily-quote" aria-live="polite">載入中⋯</p>
     </section>
 
     <section class="card status-card">
