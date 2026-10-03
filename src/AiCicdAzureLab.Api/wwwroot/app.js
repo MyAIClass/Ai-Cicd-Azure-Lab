@@ -134,12 +134,54 @@ loadDailyQuote();
 
 const challengeButton = document.querySelector("#challenge-button");
 const challengeResult = document.querySelector("#challenge-result");
+let challengeCandidates = [];
+const challengeAnimationDurationMs = 6000;
+const challengeAnimationIntervalMs = 600;
+
+async function loadChallengeCandidates() {
+  const response = await fetch("/api/challenges");
+
+  if (!response.ok) {
+    throw new Error("任務候選清單 API 回應 " + response.status);
+  }
+
+  const data = await response.json();
+  challengeCandidates = data.map((candidate) => candidate.title);
+}
+
+function pickRandomChallengeMessage() {
+  const randomIndex = Math.floor(
+    Math.random() * challengeCandidates.length,
+  );
+
+  return challengeCandidates[randomIndex] + "⋯";
+}
+
+function animateChallengeResult(output) {
+  output.textContent = pickRandomChallengeMessage();
+
+  const animationInterval = window.setInterval(() => {
+    output.textContent = pickRandomChallengeMessage();
+  }, challengeAnimationIntervalMs);
+
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      window.clearInterval(animationInterval);
+      resolve();
+    }, challengeAnimationDurationMs);
+  });
+}
 
 challengeButton.addEventListener("click", async () => {
-  challengeResult.textContent = "抽取任務中⋯";
   challengeButton.disabled = true;
+  let animationFinished;
 
   try {
+    if (challengeCandidates.length === 0) {
+      await loadChallengeCandidates();
+    }
+
+    animationFinished = animateChallengeResult(challengeResult);
     const response = await fetch("/api/challenge");
 
     if (!response.ok) {
@@ -148,11 +190,20 @@ challengeButton.addEventListener("click", async () => {
 
     const data = await response.json();
 
+    await animationFinished;
     challengeResult.textContent =
       data.title + "：" + data.description;
   } catch (error) {
+    if (animationFinished) {
+      await animationFinished;
+    }
+
     challengeResult.textContent = "抽取失敗：" + error.message;
   } finally {
     challengeButton.disabled = false;
   }
+});
+
+loadChallengeCandidates().catch(() => {
+  challengeCandidates = [];
 });

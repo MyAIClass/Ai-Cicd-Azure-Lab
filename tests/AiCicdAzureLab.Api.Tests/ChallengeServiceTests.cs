@@ -13,4 +13,17 @@ public class ChallengeServiceTests
         Assert.False(string.IsNullOrWhiteSpace(response.Title));
         Assert.False(string.IsNullOrWhiteSpace(response.Description));
     }
+
+    [Fact]
+    public void GetCandidates_returns_the_challenges_used_by_the_picker()
+    {
+        var candidates = ChallengeService.GetCandidates();
+
+        Assert.Equal(5, candidates.Count);
+        Assert.All(candidates, candidate =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(candidate.Title));
+            Assert.False(string.IsNullOrWhiteSpace(candidate.Description));
+        });
+    }
 }
