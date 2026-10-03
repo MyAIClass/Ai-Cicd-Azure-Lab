@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   font-family: "Segoe UI", "Noto Sans TC", sans-serif;
-  color: #172033;
-  background: #eef3f8;
+  color: #4a3636;
+  background: #f4e7e4;
 }
 
 * {
@@ -23,9 +23,16 @@ body {
   margin-bottom: 24px;
 }
 
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
-  color: #0067b8;
+  color: #a65d68;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -41,17 +48,23 @@ h1 {
 }
 
 .hero p:last-child {
-  color: #526070;
+  color: #76605f;
   font-size: 1.1rem;
+}
+
+.login-status {
+  display: block;
+  margin-top: 10px;
+  color: #76605f;
 }
 
 .card {
   margin-top: 18px;
   padding: 24px;
-  border: 1px solid #d7e0eb;
+  border: 1px solid #e3c9c5;
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 8px 24px rgba(30, 55, 90, 0.08);
+  background: #fff9f7;
+  box-shadow: 0 8px 24px rgba(120, 75, 75, 0.12);
 }
 
 .form-row {
@@ -78,31 +91,35 @@ label {
   margin-bottom: 10px;
 }
 
+.captcha-row button[type="submit"] {
+  margin-left: auto;
+}
+
 .captcha-row .captcha-image {
   width: 220px;
   height: 72px;
-  border: 1px solid #b8c7d8;
+  border: 1px solid #d9b9b5;
   border-radius: 8px;
-  background: #f3f7fb;
+  background: #f9efed;
 }
 
 input {
   flex: 1;
   min-width: 0;
   padding: 0 12px;
-  border: 1px solid #b8c7d8;
+  border: 1px solid #d9b9b5;
 }
 
 button {
   padding: 0 20px;
   border: 0;
   color: #ffffff;
-  background: #0067b8;
+  background: #b76e79;
   cursor: pointer;
 }
 
 button:hover {
-  background: #005a9e;
+  background: #9e5963;
 }
 
 button:disabled {
@@ -114,21 +131,42 @@ button:disabled {
   display: block;
   min-height: 24px;
   margin-top: 18px;
-  color: #344054;
+  color: #5f4a49;
 }
 
 .quote-card {
-  border-color: var(--quote-border, #d7e0eb);
-  background: linear-gradient(135deg, var(--quote-start, #fff8e7), var(--quote-end, #ffffff));
-  transition: background 400ms ease, border-color 400ms ease;
+  border-color: var(--quote-border, #e3c9c5);
+  background: linear-gradient(135deg, var(--quote-start, #fff9f7), var(--quote-end, #fff9f7));
+  transition: background 800ms ease, border-color 800ms ease;
 }
 
 .daily-quote {
   margin-bottom: 0;
-  color: var(--quote-text, #8a4b08);
+  color: var(--quote-text, #4a3636);
+  font-family: var(--quote-font, "Segoe UI", "Noto Sans TC", sans-serif);
   font-size: 1.3rem;
-  transition: color 400ms ease;
+  transition: color 800ms ease, font-family 800ms ease;
   font-weight: 700;
+}
+
+.quote-card.quote-animation-fade { animation: quote-fade 1200ms ease both; }
+.quote-card.quote-animation-slide { animation: quote-slide 1200ms ease both; }
+.quote-card.quote-animation-zoom { animation: quote-zoom 1200ms ease both; }
+.quote-card.quote-animation-sweep { animation: quote-sweep 1200ms ease both; }
+.quote-card.quote-animation-pop { animation: quote-pop 1200ms ease both; }
+
+@keyframes quote-fade { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes quote-slide { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes quote-zoom { from { opacity: 0.25; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes quote-sweep { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes quote-pop { 0% { opacity: 0.4; transform: scale(0.97); } 70% { transform: scale(1.015); } 100% { opacity: 1; transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-card.quote-animation-fade,
+  .quote-card.quote-animation-slide,
+  .quote-card.quote-animation-zoom,
+  .quote-card.quote-animation-sweep,
+  .quote-card.quote-animation-pop { animation: none; }
 }
 
 .status-card {
@@ -140,7 +178,7 @@ button:disabled {
 
 .status-card p {
   margin-bottom: 0;
-  color: #526070;
+  color: #76605f;
 }
 
 .badge {

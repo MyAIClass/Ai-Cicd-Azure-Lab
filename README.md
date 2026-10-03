@@ -30,7 +30,17 @@ GitHub Push / Pull Request
 - GET /api/captcha/{token}/image：取得驗證圖 SVG
 - POST /api/greeting：驗證碼正確後呼叫 C# API
 - GET /api/daily-quote：從 10 句精神小語中隨機取得一句；網頁重新整理時會重新抽取
+- GET /api/challenge：取得今日課程任務；首頁會先從任務候選清單隨機輪播標題 6 秒，再顯示抽取結果
+- GET /api/challenges：取得今日課程任務的候選清單
 - /：HTML 與 JavaScript 前端
+
+前端目前採用豆沙色主題，主要色票定義於 `src/AiCicdAzureLab.Api/wwwroot/styles.css`：
+
+- 頁面背景：`#F4E7E4`
+- 按鈕與強調色：`#B76E79`
+- 按鈕 hover：`#9E5963`
+- 卡片背景：`#FFF9F7`
+- 主要文字：`#4A3636`
 
 ## 專案結構
 

@@ -20,4 +20,6 @@ public static class ChallengeService
         var index = Random.Shared.Next(Challenges.Length);
         return Challenges[index];
     }
+
+    public static IReadOnlyList<ChallengeResponse> GetCandidates() => Challenges;
 }

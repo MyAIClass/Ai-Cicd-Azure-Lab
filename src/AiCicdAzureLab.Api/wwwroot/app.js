@@ -12,13 +12,38 @@ const quoteThemes = [
   { start: "#fbb6ce", end: "#ffe4ed", text: "#9f1239", border: "#d53f8c", page: "#fed7e2" }
 ];
 let currentQuoteTheme = -1;
+const quoteAnimationClasses = [
+  "quote-animation-fade",
+  "quote-animation-slide",
+  "quote-animation-zoom",
+  "quote-animation-sweep",
+  "quote-animation-pop"
+];
+let currentQuoteAnimation = -1;
+const quoteFonts = [
+  "Noto Serif TC, Microsoft JhengHei, serif",
+  "Noto Sans TC, Microsoft JhengHei, sans-serif",
+  "DFKai-SB, BiauKai, serif",
+  "Microsoft JhengHei UI, Microsoft JhengHei, sans-serif",
+  "Georgia, Noto Serif TC, serif"
+];
+let currentQuoteFont = -1;
 const healthStatus = document.querySelector("#health-status");
 const statusBadge = document.querySelector("#status-badge");
 const captchaImage = document.querySelector("#captcha-image");
 const captchaAnswer = document.querySelector("#captcha-answer");
 const captchaRefresh = document.querySelector("#refresh-captcha");
 const greetingSubmit = greetingForm.querySelector('button[type="submit"]');
+const loginButton = document.querySelector("#login-button");
+const loginStatus = document.querySelector("#login-status");
 let captchaToken = "";
+
+loginButton.addEventListener("click", () => {
+  const isLoggedIn = loginButton.getAttribute("aria-pressed") === "true";
+  loginButton.setAttribute("aria-pressed", String(!isLoggedIn));
+  loginButton.textContent = isLoggedIn ? "Login" : "Logout";
+  loginStatus.textContent = isLoggedIn ? "尚未登入" : "已登入（示範模式）";
+});
 
 async function loadCaptcha() {
   captchaRefresh.disabled = true;
@@ -135,6 +160,29 @@ function applyQuoteTheme() {
   quoteCard.style.borderColor = theme.border;
 }
 
+function applyQuoteFont() {
+  let nextFont = Math.floor(Math.random() * quoteFonts.length);
+
+  while (quoteFonts.length > 1 && nextFont === currentQuoteFont) {
+    nextFont = Math.floor(Math.random() * quoteFonts.length);
+  }
+
+  currentQuoteFont = nextFont;
+  dailyQuote.style.setProperty("--quote-font", quoteFonts[nextFont]);
+}
+
+function playQuoteAnimation() {
+  let nextAnimation = Math.floor(Math.random() * quoteAnimationClasses.length);
+
+  while (quoteAnimationClasses.length > 1 && nextAnimation === currentQuoteAnimation) {
+    nextAnimation = Math.floor(Math.random() * quoteAnimationClasses.length);
+  }
+
+  currentQuoteAnimation = nextAnimation;
+  quoteCard.classList.remove(...quoteAnimationClasses);
+  void quoteCard.offsetWidth;
+  quoteCard.classList.add(quoteAnimationClasses[nextAnimation]);
+}
 async function loadDailyQuote() {
   try {
     const response = await fetch("/api/daily-quote", { cache: "no-store" });
@@ -145,21 +193,65 @@ async function loadDailyQuote() {
     const data = await response.json();
     dailyQuote.textContent = data.quote;
     applyQuoteTheme();
+    applyQuoteFont();
+    playQuoteAnimation();
   } catch (error) {
     dailyQuote.textContent = "今日小語載入失敗：" + error.message;
   }
 }
 loadDailyQuote();
-setInterval(loadDailyQuote, 10000);
+setInterval(loadDailyQuote, 5000);
 
 const challengeButton = document.querySelector("#challenge-button");
 const challengeResult = document.querySelector("#challenge-result");
+let challengeCandidates = [];
+const challengeAnimationDurationMs = 6000;
+const challengeAnimationIntervalMs = 600;
+
+async function loadChallengeCandidates() {
+  const response = await fetch("/api/challenges");
+
+  if (!response.ok) {
+    throw new Error("任務候選清單 API 回應 " + response.status);
+  }
+
+  const data = await response.json();
+  challengeCandidates = data.map((candidate) => candidate.title);
+}
+
+function pickRandomChallengeMessage() {
+  const randomIndex = Math.floor(
+    Math.random() * challengeCandidates.length,
+  );
+
+  return challengeCandidates[randomIndex] + "⋯";
+}
+
+function animateChallengeResult(output) {
+  output.textContent = pickRandomChallengeMessage();
+
+  const animationInterval = window.setInterval(() => {
+    output.textContent = pickRandomChallengeMessage();
+  }, challengeAnimationIntervalMs);
+
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      window.clearInterval(animationInterval);
+      resolve();
+    }, challengeAnimationDurationMs);
+  });
+}
 
 challengeButton.addEventListener("click", async () => {
-  challengeResult.textContent = "抽取任務中⋯";
   challengeButton.disabled = true;
+  let animationFinished;
 
   try {
+    if (challengeCandidates.length === 0) {
+      await loadChallengeCandidates();
+    }
+
+    animationFinished = animateChallengeResult(challengeResult);
     const response = await fetch("/api/challenge");
 
     if (!response.ok) {
@@ -168,11 +260,20 @@ challengeButton.addEventListener("click", async () => {
 
     const data = await response.json();
 
+    await animationFinished;
     challengeResult.textContent =
       data.title + "：" + data.description;
   } catch (error) {
+    if (animationFinished) {
+      await animationFinished;
+    }
+
     challengeResult.textContent = "抽取失敗：" + error.message;
   } finally {
     challengeButton.disabled = false;
   }
+});
+
+loadChallengeCandidates().catch(() => {
+  challengeCandidates = [];
 });
