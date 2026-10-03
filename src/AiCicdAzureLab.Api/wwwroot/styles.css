@@ -123,9 +123,9 @@ button:disabled {
 
 .daily-quote {
   margin-bottom: 0;
-  color: #344054;
+  color: #000000;
   font-size: 1.3rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .status-card {
