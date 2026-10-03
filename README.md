@@ -30,6 +30,8 @@ GitHub Push / Pull Request
 - GET /api/captcha/{token}/image：取得驗證圖 SVG
 - POST /api/greeting：驗證碼正確後呼叫 C# API
 - GET /api/daily-quote：取得今日小語
+- GET /api/challenge：取得今日課程任務；首頁會先從任務候選清單隨機輪播標題 6 秒，再顯示抽取結果
+- GET /api/challenges：取得今日課程任務的候選清單
 - /：HTML 與 JavaScript 前端
 
 ## 專案結構
