@@ -78,6 +78,17 @@ input, button {
   font: inherit;
 }
 
+textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid #b8c7d8;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+}
+
 label {
   display: block;
   margin: 16px 0 8px;
@@ -134,6 +145,37 @@ button:disabled {
   color: #5f4a49;
 }
 
+.sentiment-heading, .sentiment-meta, .sentiment-result, .gauge-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sentiment-heading h2 { margin-bottom: 0; }
+.sentiment-heading .eyebrow { margin-bottom: 4px; }
+.sentiment-meta { margin-top: 6px; color: #667085; font-size: .85rem; }
+.sentiment-status { padding: 6px 10px; border-radius: 999px; background: #eef2f6; color: #526070; font-size: .85rem; font-weight: 700; }
+.sentiment-status.negative, .sentiment-status.error { background: #ffe1dc; color: #a33a2b; }
+.sentiment-status.neutral { background: #e9edf2; color: #526070; }
+.sentiment-status.positive { background: #d9f5e4; color: #146c43; }
+.sentiment-status.loading { background: #fff2cc; color: #7a4d00; }
+.gauge { max-width: 400px; margin: 22px auto 0; }
+.gauge svg { display: block; width: 100%; overflow: visible; }
+.gauge-track { fill: none; stroke: #e6ebf1; stroke-width: 14; stroke-linecap: round; }
+.gauge-zone { fill: none; stroke-width: 9; stroke-linecap: round; }
+.gauge-negative { stroke: #e76f51; }
+.gauge-neutral { stroke: #aab6c4; }
+.gauge-positive { stroke: #36a269; }
+.gauge-needle { stroke: #172033; stroke-width: 4; stroke-linecap: round; transform-origin: 100px 100px; transition: transform .35s ease-out; }
+.gauge-hub { fill: #172033; }
+.gauge-labels { color: #667085; font-size: .82rem; }
+.sentiment-result { justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.sentiment-result strong { font-size: 1.35rem; }
+.sentiment-result span { color: #526070; font-size: .9rem; }
+.sentiment-summary { min-height: 24px; margin: 12px 0 0; color: #526070; text-align: center; }
+.sentiment-error { min-height: 22px; margin: 8px 0 0; color: #a33a2b; text-align: center; }
+
 .quote-card {
   background: #fff9f7;
 }
@@ -184,4 +226,7 @@ button:disabled {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .sentiment-heading { align-items: flex-start; flex-direction: column; }
+  .sentiment-meta { align-items: flex-start; flex-direction: column; }
 }

@@ -1,10 +1,27 @@
 using AiCicdAzureLab.Api.Services;
+using Azure.Core;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<CaptchaService>();
+var azureOpenAiConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["AZURE_OPENAI_ENDPOINT"])
+    && !string.IsNullOrWhiteSpace(builder.Configuration["AZURE_OPENAI_DEPLOYMENT"]);
+
+if (builder.Environment.IsDevelopment() && !azureOpenAiConfigured)
+{
+    builder.Services.AddSingleton<ISentimentAnalysisService, LocalSentimentAnalysisService>();
+}
+else
+{
+    builder.Services.AddSingleton<TokenCredential, DefaultAzureCredential>();
+    builder.Services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
+}
 
 var app = builder.Build();
 
@@ -78,6 +95,36 @@ app.MapGet("/api/daily-quote", () =>
     .WithName("DailyQuote")
     .WithTags("Demo");
 
+app.MapPost("/api/sentiment/analyze", async (
+    SentimentRequest? request,
+    ISentimentAnalysisService sentimentService,
+    CancellationToken cancellationToken) =>
+{
+    var text = request?.Text?.Trim();
+    if (string.IsNullOrWhiteSpace(text) || text.Length < SentimentAnalysisService.MinTextLength)
+    {
+        return Results.BadRequest(new { error = "評論至少需要 2 個字元。" });
+    }
+
+    if (text.Length > SentimentAnalysisService.MaxTextLength)
+    {
+        return Results.BadRequest(new { error = $"評論不可超過 {SentimentAnalysisService.MaxTextLength} 個字元。" });
+    }
+
+    try
+    {
+        return Results.Ok(await sentimentService.AnalyzeAsync(text, cancellationToken));
+    }
+    catch (SentimentAnalysisException exception)
+    {
+        return exception.IsConfigurationError
+            ? Results.Problem("情感分析服務尚未完成設定。", statusCode: StatusCodes.Status503ServiceUnavailable)
+            : Results.Problem("情感分析服務目前無法使用。", statusCode: StatusCodes.Status502BadGateway);
+    }
+})
+    .WithName("AnalyzeSentiment")
+    .WithTags("AI");
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
@@ -88,3 +135,5 @@ public sealed record GreetingRequest(
     string? Name,
     string? CaptchaToken,
     string? CaptchaAnswer);
+
+public sealed record SentimentRequest(string? Text);

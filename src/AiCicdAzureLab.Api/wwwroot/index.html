@@ -18,6 +18,41 @@
       <output id="login-status" class="login-status" aria-live="polite">尚未登入</output>
     </section>
 
+    <section class="card sentiment-card">
+      <div class="sentiment-heading">
+        <div>
+          <p class="eyebrow">即時 AI 分析</p>
+          <h2>用戶評論情感分析</h2>
+        </div>
+        <span id="sentiment-status" class="sentiment-status">等待輸入</span>
+      </div>
+      <label for="sentiment-text">輸入評論</label>
+      <textarea id="sentiment-text" maxlength="500" rows="4"
+        placeholder="例如：這次服務非常好，回覆速度很快！"></textarea>
+      <div class="sentiment-meta">
+        <span>停止輸入後約 0.5 秒自動分析</span>
+        <span id="sentiment-count">0 / 500</span>
+      </div>
+      <div class="gauge" aria-hidden="true">
+        <svg viewBox="0 0 200 120" role="img">
+          <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+          <path class="gauge-zone gauge-negative" d="M 20 100 A 80 80 0 0 1 68 31"></path>
+          <path class="gauge-zone gauge-neutral" d="M 68 31 A 80 80 0 0 1 132 31"></path>
+          <path class="gauge-zone gauge-positive" d="M 132 31 A 80 80 0 0 1 180 100"></path>
+          <line id="sentiment-needle" class="gauge-needle" x1="100" y1="100" x2="100" y2="30"></line>
+          <circle class="gauge-hub" cx="100" cy="100" r="7"></circle>
+        </svg>
+        <div class="gauge-labels"><span>憤怒</span><span>中性</span><span>開心</span></div>
+      </div>
+      <div class="sentiment-result" aria-live="polite">
+        <strong id="sentiment-label">等待輸入</strong>
+        <span id="sentiment-score">分數：—</span>
+        <span id="sentiment-confidence">信心度：—</span>
+      </div>
+      <p id="sentiment-summary" class="sentiment-summary">輸入評論後，這裡會顯示分析摘要。</p>
+      <p id="sentiment-error" class="sentiment-error" role="status"></p>
+    </section>
+
     <section class="card">
       <h2>呼叫 C# API</h2>
       <form id="greeting-form">

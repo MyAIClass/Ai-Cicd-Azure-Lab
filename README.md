@@ -32,6 +32,7 @@ GitHub Push / Pull Request
 - GET /api/daily-quote：取得今日小語
 - GET /api/challenge：取得今日課程任務；首頁會先從任務候選清單隨機輪播標題 6 秒，再顯示抽取結果
 - GET /api/challenges：取得今日課程任務的候選清單
+- POST /api/sentiment/analyze：分析評論的正負向情緒
 - /：HTML 與 JavaScript 前端
 
 前端目前採用豆沙色主題，主要色票定義於 `src/AiCicdAzureLab.Api/wwwroot/styles.css`：
@@ -92,6 +93,20 @@ Windows PowerShell：
 - 首頁會自動取得驗證圖；輸入圖片中的文字後，按「驗證並送出」呼叫 API。
 
 實際連接埠可能依 .NET 開發環境設定而不同。
+
+## 即時評論情感分析
+
+首頁的「用戶評論情感分析」會在停止輸入約 0.5 秒後呼叫 `POST /api/sentiment/analyze`，以 Azure OpenAI 判斷評論的情緒分數（-1 到 1）、正負向標籤、信心度與繁體中文摘要，並用 SVG 指針度量計即時呈現。評論不會保存於瀏覽器、API 或資料庫；每次分析都會呼叫 Azure OpenAI，可能產生成本。
+
+啟用此功能需要設定：
+
+- `AZURE_OPENAI_ENDPOINT`：Azure OpenAI 資源 Endpoint
+- `AZURE_OPENAI_DEPLOYMENT`：Chat Completions 模型部署名稱
+- `AZURE_OPENAI_API_VERSION`：API 版本，預設為 `2024-10-21`
+
+API 使用 Microsoft Entra ID bearer token，不使用或保存長期共用 API Key。本機可先執行 `az login`，Azure Container Apps 則需啟用 Managed Identity，並授予該身分對 Azure OpenAI 資源的適當推理權限。
+
+在 `Development` 環境中，如果沒有設定 Azure OpenAI，系統會自動切換到本機示範分析器。它使用簡單的繁體中文正負向關鍵詞估算分數，方便展示度量計與前端互動，不代表正式的語意模型結果。設定 Azure OpenAI 後重新啟動服務，就會改用 Azure OpenAI 分析；非 Development 環境不會啟用本機示範模式。
 
 ## 圖形驗證碼
 

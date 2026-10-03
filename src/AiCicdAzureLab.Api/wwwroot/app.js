@@ -172,6 +172,90 @@ function animateChallengeResult(output) {
   });
 }
 
+const sentimentText = document.querySelector("#sentiment-text");
+const sentimentCount = document.querySelector("#sentiment-count");
+const sentimentStatus = document.querySelector("#sentiment-status");
+const sentimentNeedle = document.querySelector("#sentiment-needle");
+const sentimentLabel = document.querySelector("#sentiment-label");
+const sentimentScore = document.querySelector("#sentiment-score");
+const sentimentConfidence = document.querySelector("#sentiment-confidence");
+const sentimentSummary = document.querySelector("#sentiment-summary");
+const sentimentError = document.querySelector("#sentiment-error");
+let sentimentTimer;
+let sentimentController;
+
+function resetSentiment() {
+  sentimentStatus.textContent = "等待輸入";
+  sentimentStatus.className = "sentiment-status";
+  sentimentNeedle.style.transform = "rotate(0deg)";
+  sentimentLabel.textContent = "等待輸入";
+  sentimentScore.textContent = "分數：—";
+  sentimentConfidence.textContent = "信心度：—";
+  sentimentSummary.textContent = "輸入評論後，這裡會顯示分析摘要。";
+  sentimentError.textContent = "";
+}
+
+function applySentiment(data) {
+  const score = Number(data.polarity);
+  const labelMap = { negative: "憤怒", neutral: "中性", positive: "開心" };
+  const className = data.label === "negative" ? "negative" : data.label === "positive" ? "positive" : "neutral";
+  sentimentNeedle.style.transform = `rotate(${score * 90}deg)`;
+  sentimentLabel.textContent = labelMap[data.label] || "中性";
+  sentimentScore.textContent = `分數：${score.toFixed(2)}`;
+  sentimentConfidence.textContent = `信心度：${(Number(data.confidence) * 100).toFixed(0)}%`;
+  sentimentSummary.textContent = data.summary;
+  sentimentStatus.textContent = labelMap[data.label] || "中性";
+  sentimentStatus.className = `sentiment-status ${className}`;
+  sentimentError.textContent = "";
+}
+
+async function analyzeSentiment() {
+  const text = sentimentText.value.trim();
+  sentimentCount.textContent = `${sentimentText.value.length} / 500`;
+  if (sentimentController) {
+    sentimentController.abort();
+  }
+  if (text.length === 0) {
+    resetSentiment();
+    return;
+  }
+  if (text.length < 2) {
+    sentimentStatus.textContent = "至少輸入 2 個字";
+    return;
+  }
+
+  sentimentController = new AbortController();
+  sentimentStatus.textContent = "分析中⋯";
+  sentimentStatus.className = "sentiment-status loading";
+  try {
+    const response = await fetch("/api/sentiment/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      signal: sentimentController.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || "情感分析失敗");
+    }
+    applySentiment(data);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    const isConfigurationError = error.message.includes("尚未完成設定");
+    sentimentError.textContent = isConfigurationError
+      ? "請先設定 Azure OpenAI Endpoint 與 Deployment，設定完成後重新啟動服務。"
+      : `分析失敗，目前結果可能不是最新：${error.message}`;
+    sentimentStatus.textContent = isConfigurationError ? "尚未設定" : "暫時無法分析";
+    sentimentStatus.className = "sentiment-status error";
+  }
+}
+
+sentimentText.addEventListener("input", () => {
+  sentimentCount.textContent = `${sentimentText.value.length} / 500`;
+  clearTimeout(sentimentTimer);
+  sentimentTimer = setTimeout(analyzeSentiment, 500);
+});
+
 challengeButton.addEventListener("click", async () => {
   challengeButton.disabled = true;
   let animationFinished;
