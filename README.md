@@ -29,7 +29,7 @@ GitHub Push / Pull Request
 - GET /api/captcha：取得一次性驗證碼資訊
 - GET /api/captcha/{token}/image：取得驗證圖 SVG
 - POST /api/greeting：驗證碼正確後呼叫 C# API
-- GET /api/daily-quote：取得今日小語
+- GET /api/daily-quote：從 10 句精神小語中隨機取得一句；網頁重新整理時會重新抽取
 - /：HTML 與 JavaScript 前端
 
 ## 專案結構

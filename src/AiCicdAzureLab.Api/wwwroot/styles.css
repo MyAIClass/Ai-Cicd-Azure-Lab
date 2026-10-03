@@ -118,13 +118,16 @@ button:disabled {
 }
 
 .quote-card {
-  background: linear-gradient(135deg, #fff8e7, #ffffff);
+  border-color: var(--quote-border, #d7e0eb);
+  background: linear-gradient(135deg, var(--quote-start, #fff8e7), var(--quote-end, #ffffff));
+  transition: background 400ms ease, border-color 400ms ease;
 }
 
 .daily-quote {
   margin-bottom: 0;
-  color: #8a4b08;
+  color: var(--quote-text, #8a4b08);
   font-size: 1.3rem;
+  transition: color 400ms ease;
   font-weight: 700;
 }
 

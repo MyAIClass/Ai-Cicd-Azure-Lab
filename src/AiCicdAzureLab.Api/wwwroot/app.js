@@ -2,6 +2,16 @@ const greetingForm = document.querySelector("#greeting-form");
 const nameInput = document.querySelector("#name");
 const result = document.querySelector("#result");
 const dailyQuote = document.querySelector("#daily-quote");
+const quoteCard = document.querySelector(".quote-card");
+
+const quoteThemes = [
+  { start: "#ffd166", end: "#fff1bf", text: "#713f12", border: "#e0a800", page: "#ffe8a3" },
+  { start: "#90cdf4", end: "#d9f0ff", text: "#075985", border: "#3182ce", page: "#c7e7ff" },
+  { start: "#9ae6b4", end: "#dcfce7", text: "#166534", border: "#38a169", page: "#c6f6d5" },
+  { start: "#d6bcfa", end: "#f0e5ff", text: "#6b21a8", border: "#805ad5", page: "#e9d8fd" },
+  { start: "#fbb6ce", end: "#ffe4ed", text: "#9f1239", border: "#d53f8c", page: "#fed7e2" }
+];
+let currentQuoteTheme = -1;
 const healthStatus = document.querySelector("#health-status");
 const statusBadge = document.querySelector("#status-badge");
 const captchaImage = document.querySelector("#captcha-image");
@@ -108,20 +118,39 @@ loadCaptcha().catch((error) => {
   result.textContent = "驗證碼載入失敗：" + error.message;
 });
 
+function applyQuoteTheme() {
+  let nextTheme = Math.floor(Math.random() * quoteThemes.length);
+
+  while (quoteThemes.length > 1 && nextTheme === currentQuoteTheme) {
+    nextTheme = Math.floor(Math.random() * quoteThemes.length);
+  }
+
+  currentQuoteTheme = nextTheme;
+  const theme = quoteThemes[nextTheme];
+  quoteCard.style.setProperty("--quote-start", theme.start);
+  quoteCard.style.setProperty("--quote-end", theme.end);
+  quoteCard.style.setProperty("--quote-text", theme.text);
+  quoteCard.style.setProperty("--quote-border", theme.border);
+  quoteCard.style.background = `linear-gradient(135deg, ${theme.start}, ${theme.end})`;
+  quoteCard.style.borderColor = theme.border;
+}
+
 async function loadDailyQuote() {
   try {
-    const response = await fetch("/api/daily-quote");
+    const response = await fetch("/api/daily-quote", { cache: "no-store" });
     if (!response.ok) {
       throw new Error("Daily Quote API 回應 " + response.status);
     }
 
     const data = await response.json();
     dailyQuote.textContent = data.quote;
+    applyQuoteTheme();
   } catch (error) {
     dailyQuote.textContent = "今日小語載入失敗：" + error.message;
   }
 }
 loadDailyQuote();
+setInterval(loadDailyQuote, 10000);
 
 const challengeButton = document.querySelector("#challenge-button");
 const challengeResult = document.querySelector("#challenge-result");
