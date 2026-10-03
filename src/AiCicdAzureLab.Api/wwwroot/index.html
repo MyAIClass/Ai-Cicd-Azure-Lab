@@ -22,6 +22,14 @@
           <input id="name" name="name" maxlength="50" placeholder="例如：小明" value="課程學員">
           <button type="submit">送出</button>
         </div>
+        <div class="captcha-section">
+          <label for="captcha-answer">請輸入圖片中的文字</label>
+          <div class="captcha-row">
+            <img id="captcha-image" class="captcha-image" alt="圖形驗證碼載入中" width="220" height="72">
+            <button id="refresh-captcha" type="button">換一張</button>
+          </div>
+          <input id="captcha-answer" name="captcha-answer" maxlength="5" autocomplete="off" autocapitalize="characters" required>
+        </div>
       </form>
       <output id="result" class="result" aria-live="polite">尚未呼叫 API</output>
     </section>
