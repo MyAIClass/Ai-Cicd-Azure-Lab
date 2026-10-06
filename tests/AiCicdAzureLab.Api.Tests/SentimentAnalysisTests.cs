@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -6,6 +7,7 @@ using AiCicdAzureLab.Api.Services;
 using Azure.Core;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
@@ -206,6 +208,32 @@ public class SentimentApiRateLimitTests : IClassFixture<SentimentApiFactory>
     }
 
     [Fact]
+    public async Task Client_rejections_do_not_consume_application_instance_quota()
+    {
+        using var factory = new SentimentApiFactory();
+
+        for (var requestNumber = 0; requestNumber < 10; requestNumber++)
+        {
+            var statusCode = await AnalyzeFrom(factory, "192.0.2.1");
+            Assert.Equal(HttpStatusCode.OK, statusCode);
+        }
+
+        for (var requestNumber = 0; requestNumber < 15; requestNumber++)
+        {
+            var statusCode = await AnalyzeFrom(factory, "192.0.2.1");
+            Assert.Equal(HttpStatusCode.TooManyRequests, statusCode);
+        }
+
+        for (var requestNumber = 0; requestNumber < 10; requestNumber++)
+        {
+            var statusCode = await AnalyzeFrom(factory, "192.0.2.2");
+            Assert.Equal(HttpStatusCode.OK, statusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, await AnalyzeFrom(factory, "192.0.2.2"));
+    }
+
+    [Fact]
     public async Task Limits_sentiment_requests_per_application_instance()
     {
         using var factory = new SentimentApiFactory();
@@ -215,21 +243,55 @@ public class SentimentApiRateLimitTests : IClassFixture<SentimentApiFactory>
 
         for (var requestNumber = 0; requestNumber < 25; requestNumber++)
         {
-            using var lease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext());
+            var remoteIpAddress = $"192.0.2.{requestNumber + 1}";
+            using var lease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext(remoteIpAddress));
             Assert.True(lease.IsAcquired);
         }
 
-        using var rejectedLease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext());
+        using var rejectedLease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext("192.0.2.100"));
 
         Assert.False(rejectedLease.IsAcquired);
     }
 
-    private static HttpContext CreateSentimentRequestContext()
+    private static async Task<HttpStatusCode> AnalyzeFrom(SentimentApiFactory factory, string remoteIpAddress)
+    {
+        var requestBody = Encoding.UTF8.GetBytes("{\"text\":\"服務很好\"}");
+        using var requestStream = new MemoryStream(requestBody);
+        var requestBodyReader = PipeReader.Create(requestStream, new StreamPipeReaderOptions(leaveOpen: true));
+        var context = await factory.Server.SendAsync(context =>
+        {
+            context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIpAddress);
+            context.Request.Method = HttpMethods.Post;
+            context.Request.Path = "/api/sentiment/analyze";
+            context.Request.ContentType = "application/json";
+            context.Request.ContentLength = requestBody.Length;
+            context.Request.Body = requestStream;
+            context.Features.Set<IRequestBodyPipeFeature>(
+                new TestRequestBodyPipeFeature(requestBodyReader));
+            context.Features.Set<IHttpRequestBodyDetectionFeature>(new TestRequestBodyDetectionFeature());
+        });
+
+        await requestBodyReader.CompleteAsync();
+        return (HttpStatusCode)context.Response.StatusCode;
+    }
+
+    private static HttpContext CreateSentimentRequestContext(string remoteIpAddress)
     {
         var context = new DefaultHttpContext();
         context.Request.Method = HttpMethods.Post;
         context.Request.Path = "/api/sentiment/analyze";
+        context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIpAddress);
         return context;
+    }
+
+    private sealed class TestRequestBodyPipeFeature(PipeReader reader) : IRequestBodyPipeFeature
+    {
+        public PipeReader Reader { get; } = reader;
+    }
+
+    private sealed class TestRequestBodyDetectionFeature : IHttpRequestBodyDetectionFeature
+    {
+        public bool CanHaveBody => true;
     }
 }
 

@@ -7,6 +7,17 @@ using Microsoft.AspNetCore.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<PartitionedRateLimiter<HttpContext>>(
+    PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            })));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -24,16 +35,6 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true
         });
     });
-    options.AddPolicy("sentiment-per-client", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
 });
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
@@ -76,6 +77,24 @@ app.UseRouting();
 app.UseCors("Frontend");
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.Use(async (context, next) =>
+{
+    var isSentimentRequest = HttpMethods.IsPost(context.Request.Method)
+        && context.Request.Path.Equals("/api/sentiment/analyze", StringComparison.OrdinalIgnoreCase);
+    if (isSentimentRequest)
+    {
+        using var lease = await context.RequestServices
+            .GetRequiredService<PartitionedRateLimiter<HttpContext>>()
+            .AcquireAsync(context);
+        if (!lease.IsAcquired)
+        {
+            context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
@@ -172,8 +191,7 @@ app.MapPost("/api/sentiment/analyze", async (
     }
 })
     .WithName("AnalyzeSentiment")
-    .WithTags("AI")
-    .RequireRateLimiting("sentiment-per-client");
+    .WithTags("AI");
 
 app.MapFallbackToFile("index.html");
 
