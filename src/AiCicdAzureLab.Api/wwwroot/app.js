@@ -188,8 +188,9 @@ const sentimentScore = document.querySelector("#sentiment-score");
 const sentimentConfidence = document.querySelector("#sentiment-confidence");
 const sentimentSummary = document.querySelector("#sentiment-summary");
 const sentimentError = document.querySelector("#sentiment-error");
-let sentimentTimer;
 let sentimentController;
+let pendingSentimentText;
+let lastAnalyzedSentimentText;
 
 function resetSentiment() {
   sentimentStatus.textContent = "等待輸入";
@@ -198,7 +199,7 @@ function resetSentiment() {
   sentimentLabel.textContent = "等待輸入";
   sentimentScore.textContent = "分數：—";
   sentimentConfidence.textContent = "信心度：—";
-  sentimentSummary.textContent = "輸入評論後，這裡會顯示分析摘要。";
+  sentimentSummary.textContent = "輸入評論並離開輸入框後，這裡會顯示分析摘要。";
   sentimentError.textContent = "";
 }
 
@@ -219,6 +220,9 @@ function applySentiment(data) {
 async function analyzeSentiment() {
   const text = sentimentText.value.trim();
   sentimentCount.textContent = `${sentimentText.value.length} / 500`;
+  if (text.length > 0 && (text === pendingSentimentText || text === lastAnalyzedSentimentText)) {
+    return;
+  }
   if (sentimentController) {
     sentimentController.abort();
   }
@@ -231,7 +235,9 @@ async function analyzeSentiment() {
     return;
   }
 
-  sentimentController = new AbortController();
+  const controller = new AbortController();
+  sentimentController = controller;
+  pendingSentimentText = text;
   sentimentStatus.textContent = "分析中⋯";
   sentimentStatus.className = "sentiment-status loading";
   try {
@@ -239,13 +245,17 @@ async function analyzeSentiment() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
-      signal: sentimentController.signal,
+      signal: controller.signal,
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("分析請求太頻繁，請稍後再試。");
+      }
       throw new Error(data.detail || data.error || "情感分析失敗");
     }
     applySentiment(data);
+    lastAnalyzedSentimentText = text;
   } catch (error) {
     if (error.name === "AbortError") return;
     const isConfigurationError = error.message.includes("尚未完成設定");
@@ -254,14 +264,28 @@ async function analyzeSentiment() {
       : `分析失敗，目前結果可能不是最新：${error.message}`;
     sentimentStatus.textContent = isConfigurationError ? "尚未設定" : "暫時無法分析";
     sentimentStatus.className = "sentiment-status error";
+  } finally {
+    if (sentimentController === controller) {
+      sentimentController = null;
+      pendingSentimentText = null;
+    }
   }
 }
 
 sentimentText.addEventListener("input", () => {
   sentimentCount.textContent = `${sentimentText.value.length} / 500`;
-  clearTimeout(sentimentTimer);
-  sentimentTimer = setTimeout(analyzeSentiment, 500);
+  if (sentimentController) {
+    sentimentController.abort();
+    sentimentController = null;
+  }
+  pendingSentimentText = null;
+  lastAnalyzedSentimentText = null;
+  resetSentiment();
+  if (sentimentText.value.trim().length > 0) {
+    sentimentStatus.textContent = "離開輸入框後分析";
+  }
 });
+sentimentText.addEventListener("blur", analyzeSentiment);
 
 challengeButton.addEventListener("click", async () => {
   challengeButton.disabled = true;

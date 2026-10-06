@@ -5,11 +5,14 @@ using System.Text.Json;
 using AiCicdAzureLab.Api.Services;
 using Azure.Core;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AiCicdAzureLab.Api.Tests;
@@ -176,6 +179,57 @@ public class SentimentApiTests : IClassFixture<SentimentApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("positive", result?.Label);
         Assert.Equal(0.8, result?.Polarity);
+    }
+}
+
+public class SentimentApiRateLimitTests : IClassFixture<SentimentApiFactory>
+{
+    private readonly HttpClient client;
+
+    public SentimentApiRateLimitTests(SentimentApiFactory factory)
+    {
+        client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Limits_sentiment_requests_per_client()
+    {
+        for (var requestNumber = 0; requestNumber < 10; requestNumber++)
+        {
+            var response = await client.PostAsJsonAsync("/api/sentiment/analyze", new { text = "服務很好" });
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        var rejectedResponse = await client.PostAsJsonAsync("/api/sentiment/analyze", new { text = "服務很好" });
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejectedResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Limits_sentiment_requests_per_application_instance()
+    {
+        using var factory = new SentimentApiFactory();
+        using var client = factory.CreateClient();
+        var globalLimiter = factory.Services.GetRequiredService<IOptions<RateLimiterOptions>>().Value.GlobalLimiter;
+        Assert.NotNull(globalLimiter);
+
+        for (var requestNumber = 0; requestNumber < 25; requestNumber++)
+        {
+            using var lease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext());
+            Assert.True(lease.IsAcquired);
+        }
+
+        using var rejectedLease = await globalLimiter.AcquireAsync(CreateSentimentRequestContext());
+
+        Assert.False(rejectedLease.IsAcquired);
+    }
+
+    private static HttpContext CreateSentimentRequestContext()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/sentiment/analyze";
+        return context;
     }
 }
 

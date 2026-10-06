@@ -1,10 +1,40 @@
+using System.Threading.RateLimiting;
 using AiCicdAzureLab.Api.Services;
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var isSentimentRequest = HttpMethods.IsPost(context.Request.Method)
+            && context.Request.Path.Equals("/api/sentiment/analyze", StringComparison.OrdinalIgnoreCase);
+        var partitionKey = isSentimentRequest ? "sentiment" : "other";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = isSentimentRequest ? 25 : int.MaxValue,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+    options.AddPolicy("sentiment-per-client", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
     var corsAllowedOrigins = builder.Configuration
@@ -46,6 +76,7 @@ app.UseRouting();
 app.UseCors("Frontend");
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("Health")
@@ -141,7 +172,8 @@ app.MapPost("/api/sentiment/analyze", async (
     }
 })
     .WithName("AnalyzeSentiment")
-    .WithTags("AI");
+    .WithTags("AI")
+    .RequireRateLimiting("sentiment-per-client");
 
 app.MapFallbackToFile("index.html");
 

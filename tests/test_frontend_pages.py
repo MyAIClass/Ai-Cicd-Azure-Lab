@@ -43,6 +43,15 @@ class FrontendPagesTests(unittest.TestCase):
         self.assertIn("captchaImage.src = apiUrl(data.imageUrl)", javascript)
         self.assertIn("new URL(path, `${apiBaseUrl}/`)", javascript)
 
+    def test_sentiment_analysis_runs_after_input_blur(self):
+        javascript = APP.read_text(encoding="utf-8")
+        html = INDEX.read_text(encoding="utf-8")
+
+        self.assertIn('sentimentText.addEventListener("blur", analyzeSentiment);', javascript)
+        self.assertNotIn("setTimeout(analyzeSentiment", javascript)
+        self.assertIn("text === lastAnalyzedSentimentText", javascript)
+        self.assertIn("離開輸入框後自動分析", html)
+
     def test_pages_build_requires_https_api_origin_and_generates_public_config(self):
         self.assertEqual(
             "https://app.example.azurecontainerapps.io",
