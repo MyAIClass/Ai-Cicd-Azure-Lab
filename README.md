@@ -106,9 +106,8 @@ Windows PowerShell：
 
 - `AZURE_OPENAI_ENDPOINT`：Azure OpenAI 資源 Endpoint
 - `AZURE_OPENAI_DEPLOYMENT`：Chat Completions 模型部署名稱
-- `AZURE_OPENAI_API_VERSION`：API 版本，預設為 `2024-10-21`
 
-API 使用 Microsoft Entra ID bearer token，不使用或保存長期共用 API Key。本機可先執行 `az login`，Azure Container Apps 則需啟用 Managed Identity，並授予該身分對 Azure OpenAI 資源的適當推理權限。
+API 使用 Azure OpenAI v1 Chat Completions endpoint（`/openai/v1/chat/completions`），不需設定日期型 API version。驗證使用 Microsoft Entra ID bearer token 與 `https://ai.azure.com/.default` scope，不使用或保存長期共用 API Key。本機可先執行 `az login`，Azure Container Apps 則需啟用 Managed Identity，並授予該身分對 Azure OpenAI 資源的適當推理權限。
 
 在 `Development` 環境中，如果沒有設定 Azure OpenAI，系統會自動切換到本機示範分析器。它使用簡單的繁體中文正負向關鍵詞估算分數，方便展示度量計與前端互動，不代表正式的語意模型結果。設定 Azure OpenAI 後重新啟動服務，就會改用 Azure OpenAI 分析；非 Development 環境不會啟用本機示範模式。
 
