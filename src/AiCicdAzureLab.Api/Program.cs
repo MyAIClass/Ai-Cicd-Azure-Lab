@@ -1,10 +1,41 @@
+using System.Threading.RateLimiting;
 using AiCicdAzureLab.Api.Services;
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<PartitionedRateLimiter<HttpContext>>(
+    PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            })));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var isSentimentRequest = HttpMethods.IsPost(context.Request.Method)
+            && context.Request.Path.Equals("/api/sentiment/analyze", StringComparison.OrdinalIgnoreCase);
+        var partitionKey = isSentimentRequest ? "sentiment" : "other";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = isSentimentRequest ? 25 : int.MaxValue,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
     var corsAllowedOrigins = builder.Configuration
@@ -46,6 +77,25 @@ app.UseRouting();
 app.UseCors("Frontend");
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.Use(async (context, next) =>
+{
+    var isSentimentRequest = HttpMethods.IsPost(context.Request.Method)
+        && context.Request.Path.Equals("/api/sentiment/analyze", StringComparison.OrdinalIgnoreCase);
+    if (isSentimentRequest)
+    {
+        using var lease = await context.RequestServices
+            .GetRequiredService<PartitionedRateLimiter<HttpContext>>()
+            .AcquireAsync(context);
+        if (!lease.IsAcquired)
+        {
+            context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            return;
+        }
+    }
+
+    await next();
+});
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("Health")

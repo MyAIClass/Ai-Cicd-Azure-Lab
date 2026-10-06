@@ -30,7 +30,7 @@
       <textarea id="sentiment-text" maxlength="500" rows="4"
         placeholder="例如：這次服務非常好，回覆速度很快！"></textarea>
       <div class="sentiment-meta">
-        <span>停止輸入後約 0.5 秒自動分析</span>
+        <span>焦點離開輸入框時自動分析（Ctrl+Enter 快速觸發）</span>
         <span id="sentiment-count">0 / 500</span>
       </div>
       <div class="gauge" aria-hidden="true">
@@ -49,7 +49,7 @@
         <span id="sentiment-score">分數：—</span>
         <span id="sentiment-confidence">信心度：—</span>
       </div>
-      <p id="sentiment-summary" class="sentiment-summary">輸入評論後，這裡會顯示分析摘要。</p>
+      <p id="sentiment-summary" class="sentiment-summary">輸入評論並離開輸入框後，這裡會顯示分析摘要。</p>
       <p id="sentiment-error" class="sentiment-error" role="status"></p>
     </section>
 
