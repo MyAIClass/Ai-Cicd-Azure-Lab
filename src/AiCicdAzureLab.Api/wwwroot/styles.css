@@ -135,12 +135,12 @@ button:disabled {
 }
 
 .quote-card {
-  background: linear-gradient(135deg, #fff8e7, #ffffff);
+  background: #ffffff;
 }
 
 .daily-quote {
   margin-bottom: 0;
-  color: #8a4b08;
+  color: #000000;
   font-size: 1.3rem;
   font-weight: 700;
 }
