@@ -70,6 +70,8 @@ public class SentimentAnalysisServiceTests
         Assert.Equal("Bearer test-token", authorization);
         using var document = JsonDocument.Parse(requestBody!);
         Assert.Equal("sentiment", document.RootElement.GetProperty("model").GetString());
+        Assert.Equal(1024, document.RootElement.GetProperty("max_completion_tokens").GetInt32());
+        Assert.False(document.RootElement.TryGetProperty("temperature", out _));
         Assert.Equal(new[] { "https://ai.azure.com/.default" }, credential.RequestedScopes);
     }
 

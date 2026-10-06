@@ -57,7 +57,7 @@ public sealed class SentimentAnalysisService : ISentimentAnalysisService
                 new { role = "system", content = "你是繁體中文評論情感分析器。只輸出 JSON，不要 Markdown 或其他文字。JSON 必須包含 polarity（-1 到 1 的數字）、label（negative、neutral 或 positive）、confidence（0 到 1 的數字）、summary（不超過 80 字的繁體中文簡述）。polarity <= -0.2 時 label 必須是 negative，polarity >= 0.2 時必須是 positive，其餘為 neutral。" },
                 new { role = "user", content = text }
             },
-            temperature = 0,
+            max_completion_tokens = 1024,
             response_format = new { type = "json_object" }
         };
 
