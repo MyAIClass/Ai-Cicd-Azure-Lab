@@ -22,7 +22,7 @@ Variable 值由講師或資源管理者維護，不要寫入 Repository、PR 留
 
 ## Workflow 行為
 
-[`ai-ci-diagnosis.yml`](../.github/workflows/ai-ci-diagnosis.yml) 只監聽 `.NET CI` 的 `workflow_run` 完成事件，且只在結論為 `failure` 時執行：
+[`ai-ci-diagnosis.yml`](../.github/workflows/ai-ci-diagnosis.yml) 只監聽 `.NET CI` 的 `workflow_run` 完成事件。CI 失敗時才執行以下診斷步驟；CI 通過時則執行「無需診斷」說明工作，讓 workflow 顯示成功且不呼叫 Azure OpenAI：
 
 1. 使用 GitHub CLI 讀取該次執行的失敗步驟日誌，以 `--repo "$GITHUB_REPOSITORY"` 明確指定 Repository，不需 checkout 失敗分支的程式碼。
 2. 遮罩常見 Token、`Authorization`、Cookie、Key、Secret 與 Password 內容，並將送往模型的日誌限制為 12,000 bytes。`Authorization:` 不分大小寫，會遮罩其後直到行尾的完整內容（包含 Bearer、Basic 或 Digest 的憑證），而非只遮罩驗證方式的名稱。
@@ -42,5 +42,5 @@ Variable 值由講師或資源管理者維護，不要寫入 Repository、PR 留
 2. 建立只修改測試預期值的示範 PR，使 `.NET CI` 的 xUnit 測試失敗；不要在 `main` 保留故意失敗的測試。
 3. 確認 `Azure OpenAI CI diagnosis` 在 `.NET CI` 失敗後執行，且 PR 出現診斷留言。
 4. 檢查留言是否含「可能原因」、「可確認的證據」、「最小修正」、「應驗證的測試」與「仍需人工確認」五個段落，並人工核對其內容。
-5. 修正測試、重新 push，確認 `.NET CI` 通過；診斷 workflow 不應在成功 CI run 執行。
+5. 修正測試、重新 push，確認 `.NET CI` 通過；診斷 workflow 應以成功結束，並在「No diagnosis needed (CI passed)」工作記錄略過原因，不呼叫 Azure OpenAI。
 6. 暫時使用不存在的 `AZURE_OPENAI_DEPLOYMENT` 預演失敗路徑，確認 PR 留言改為要求人工診斷，且 CI 原本的失敗結果維持不變；測試後立即還原設定。

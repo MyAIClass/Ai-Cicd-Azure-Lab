@@ -10,6 +10,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  skip-diagnosis:
+    name: No diagnosis needed (CI passed)
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why diagnosis was skipped
+        run: echo "CI 通過，無需進行 Azure OpenAI 診斷。"
+
   diagnose:
     name: Diagnose failed CI run
     if: github.event.workflow_run.conclusion == 'failure'
