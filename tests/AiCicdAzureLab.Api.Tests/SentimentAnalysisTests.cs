@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using AiCicdAzureLab.Api.Services;
 using Azure.Core;
 using Microsoft.AspNetCore.Hosting;
@@ -42,6 +43,37 @@ public class SentimentAnalysisServiceTests
     }
 
     [Fact]
+    public async Task Sends_v1_chat_completion_request_with_foundry_token_scope()
+    {
+        Uri? requestUri = null;
+        string? authorization = null;
+        string? requestBody = null;
+        var client = new HttpClient(new StubHandler(request =>
+        {
+            requestUri = request.RequestUri;
+            authorization = request.Headers.Authorization?.ToString();
+            requestBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"choices\":[{\"message\":{\"content\":\"{\\\"polarity\\\":0.8,\\\"label\\\":\\\"positive\\\",\\\"confidence\\\":0.95,\\\"summary\\\":\\\"服務令人滿意。\\\"}\"}}]}",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }));
+        var credential = new TestTokenCredential();
+        var service = CreateService(client, credential);
+
+        await service.AnalyzeAsync("服務很好");
+
+        Assert.Equal("https://example.openai.azure.com/openai/v1/chat/completions", requestUri?.ToString());
+        Assert.Equal("Bearer test-token", authorization);
+        using var document = JsonDocument.Parse(requestBody!);
+        Assert.Equal("sentiment", document.RootElement.GetProperty("model").GetString());
+        Assert.Equal(new[] { "https://ai.azure.com/.default" }, credential.RequestedScopes);
+    }
+
+    [Fact]
     public async Task Rejects_inconsistent_model_label()
     {
         var client = CreateClient("{\"choices\":[{\"message\":{\"content\":\"{\\\"polarity\\\":-0.8,\\\"label\\\":\\\"positive\\\",\\\"confidence\\\":0.9,\\\"summary\\\":\\\"內容負面。\\\"}\"}}]}");
@@ -63,7 +95,7 @@ public class SentimentAnalysisServiceTests
         Assert.Equal("情感分析服務目前無法使用。", exception.Message);
     }
 
-    private static SentimentAnalysisService CreateService(HttpClient client)
+    private static SentimentAnalysisService CreateService(HttpClient client, TestTokenCredential? credential = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -73,7 +105,7 @@ public class SentimentAnalysisServiceTests
             })
             .Build();
 
-        return new SentimentAnalysisService(client, new TestTokenCredential(), configuration, NullLogger<SentimentAnalysisService>.Instance);
+        return new SentimentAnalysisService(client, credential ?? new TestTokenCredential(), configuration, NullLogger<SentimentAnalysisService>.Instance);
     }
 
     private static HttpClient CreateClient(string responseBody) =>
@@ -90,11 +122,16 @@ public class SentimentAnalysisServiceTests
 
     private sealed class TestTokenCredential : TokenCredential
     {
+        public string[] RequestedScopes { get; private set; } = [];
+
         public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
             new("test-token", DateTimeOffset.UtcNow.AddMinutes(5));
 
-        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(new AccessToken("test-token", DateTimeOffset.UtcNow.AddMinutes(5)));
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        {
+            RequestedScopes = requestContext.Scopes.ToArray();
+            return ValueTask.FromResult(new AccessToken("test-token", DateTimeOffset.UtcNow.AddMinutes(5)));
+        }
     }
 }
 

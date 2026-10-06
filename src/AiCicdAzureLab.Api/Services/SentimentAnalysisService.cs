@@ -14,7 +14,7 @@ public sealed class SentimentAnalysisService : ISentimentAnalysisService
 {
     public const int MinTextLength = 2;
     public const int MaxTextLength = 500;
-    private const string CognitiveServicesScope = "https://cognitiveservices.azure.com/.default";
+    private const string FoundryScope = "https://ai.azure.com/.default";
     private readonly HttpClient httpClient;
     private readonly TokenCredential credential;
     private readonly IConfiguration configuration;
@@ -32,7 +32,6 @@ public sealed class SentimentAnalysisService : ISentimentAnalysisService
     {
         var endpoint = configuration["AZURE_OPENAI_ENDPOINT"]?.TrimEnd('/');
         var deployment = configuration["AZURE_OPENAI_DEPLOYMENT"];
-        var apiVersion = configuration["AZURE_OPENAI_API_VERSION"] ?? "2024-10-21";
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(deployment))
         {
             throw new SentimentAnalysisException("情感分析服務尚未設定。", isConfigurationError: true);
@@ -41,7 +40,7 @@ public sealed class SentimentAnalysisService : ISentimentAnalysisService
         AccessToken token;
         try
         {
-            token = await credential.GetTokenAsync(new TokenRequestContext([CognitiveServicesScope]), cancellationToken);
+            token = await credential.GetTokenAsync(new TokenRequestContext([FoundryScope]), cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -49,9 +48,10 @@ public sealed class SentimentAnalysisService : ISentimentAnalysisService
             throw new SentimentAnalysisException("無法連線至情感分析服務。", exception);
         }
 
-        var requestUri = $"{endpoint}/openai/deployments/{Uri.EscapeDataString(deployment)}/chat/completions?api-version={Uri.EscapeDataString(apiVersion)}";
+        var requestUri = $"{endpoint}/openai/v1/chat/completions";
         var requestBody = new
         {
+            model = deployment,
             messages = new object[]
             {
                 new { role = "system", content = "你是繁體中文評論情感分析器。只輸出 JSON，不要 Markdown 或其他文字。JSON 必須包含 polarity（-1 到 1 的數字）、label（negative、neutral 或 positive）、confidence（0 到 1 的數字）、summary（不超過 80 字的繁體中文簡述）。polarity <= -0.2 時 label 必須是 negative，polarity >= 0.2 時必須是 positive，其餘為 neutral。" },
