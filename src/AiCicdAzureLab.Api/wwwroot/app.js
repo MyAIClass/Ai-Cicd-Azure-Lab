@@ -285,6 +285,13 @@ sentimentText.addEventListener("input", () => {
     sentimentStatus.textContent = "離開輸入框後分析";
   }
 });
+sentimentText.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || !event.ctrlKey || event.isComposing || event.repeat) {
+    return;
+  }
+  event.preventDefault();
+  sentimentText.blur();
+});
 sentimentText.addEventListener("blur", analyzeSentiment);
 
 challengeButton.addEventListener("click", async () => {

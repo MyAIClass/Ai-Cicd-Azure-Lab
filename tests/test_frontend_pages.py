@@ -48,9 +48,12 @@ class FrontendPagesTests(unittest.TestCase):
         html = INDEX.read_text(encoding="utf-8")
 
         self.assertIn('sentimentText.addEventListener("blur", analyzeSentiment);', javascript)
+        self.assertIn('sentimentText.addEventListener("keydown"', javascript)
+        self.assertIn("event.ctrlKey", javascript)
+        self.assertIn("sentimentText.blur()", javascript)
         self.assertNotIn("setTimeout(analyzeSentiment", javascript)
         self.assertIn("text === lastAnalyzedSentimentText", javascript)
-        self.assertIn("離開輸入框後自動分析", html)
+        self.assertIn("Ctrl+Enter 快速觸發", html)
 
     def test_pages_build_requires_https_api_origin_and_generates_public_config(self):
         self.assertEqual(
