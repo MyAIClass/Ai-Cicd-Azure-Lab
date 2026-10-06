@@ -1,4 +1,11 @@
 const greetingForm = document.querySelector("#greeting-form");
+const configuredApiBaseUrl = window.APP_CONFIG?.apiBaseUrl?.trim().replace(/\/+$/, "");
+const apiBaseUrl = configuredApiBaseUrl || window.location.origin;
+
+function apiUrl(path) {
+  return new URL(path, `${apiBaseUrl}/`).toString();
+}
+
 const nameInput = document.querySelector("#name");
 const result = document.querySelector("#result");
 const dailyQuote = document.querySelector("#daily-quote");
@@ -23,14 +30,14 @@ async function loadCaptcha() {
   captchaRefresh.disabled = true;
 
   try {
-    const response = await fetch("/api/captcha");
+    const response = await fetch(apiUrl("/api/captcha"));
     if (!response.ok) {
       throw new Error("驗證碼 API 回應 " + response.status);
     }
 
     const data = await response.json();
     captchaToken = data.token;
-    captchaImage.src = data.imageUrl;
+    captchaImage.src = apiUrl(data.imageUrl);
     captchaAnswer.value = "";
   } catch (error) {
     captchaToken = "";
@@ -66,7 +73,7 @@ greetingForm.addEventListener("submit", async (event) => {
   captchaRefresh.disabled = true;
 
   try {
-    const response = await fetch("/api/greeting", {
+    const response = await fetch(apiUrl("/api/greeting"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -98,7 +105,7 @@ greetingForm.addEventListener("submit", async (event) => {
 
 async function checkHealth() {
   try {
-    const response = await fetch("/health");
+    const response = await fetch(apiUrl("/health"));
     if (!response.ok) {
       throw new Error("Health API 回應 " + response.status);
     }
@@ -119,7 +126,7 @@ loadCaptcha().catch((error) => {
 
 async function loadDailyQuote() {
   try {
-    const response = await fetch("/api/daily-quote");
+    const response = await fetch(apiUrl("/api/daily-quote"));
     if (!response.ok) {
       throw new Error("Daily Quote API 回應 " + response.status);
     }
@@ -139,7 +146,7 @@ const challengeAnimationDurationMs = 6000;
 const challengeAnimationIntervalMs = 600;
 
 async function loadChallengeCandidates() {
-  const response = await fetch("/api/challenges");
+  const response = await fetch(apiUrl("/api/challenges"));
 
   if (!response.ok) {
     throw new Error("任務候選清單 API 回應 " + response.status);
@@ -228,7 +235,7 @@ async function analyzeSentiment() {
   sentimentStatus.textContent = "分析中⋯";
   sentimentStatus.className = "sentiment-status loading";
   try {
-    const response = await fetch("/api/sentiment/analyze", {
+    const response = await fetch(apiUrl("/api/sentiment/analyze"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -266,7 +273,7 @@ challengeButton.addEventListener("click", async () => {
     }
 
     animationFinished = animateChallengeResult(challengeResult);
-    const response = await fetch("/api/challenge");
+    const response = await fetch(apiUrl("/api/challenge"));
 
     if (!response.ok) {
       throw new Error("API 回應 " + response.status);

@@ -27,7 +27,10 @@ jobs:
       - name: Run tests
         run: dotnet test tests/AiCicdAzureLab.Api.Tests/AiCicdAzureLab.Api.Tests.csproj --configuration Release --no-restore
 
-      - name: Test AI review request
+      - name: Test frontend Pages deployment
+        run: python3 -m unittest discover -s tests -p 'test_frontend_*.py'
+
+      - name: Test AI workflow requests
         run: python3 -m unittest discover -s tests -p 'test_ai_*_workflow.py'
 
       - name: Build Docker image

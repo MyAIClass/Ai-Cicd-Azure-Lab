@@ -2,7 +2,7 @@
 
 這是一個可直接推送到 GitHub 的課程示範 Repository，用來示範如何以 GitHub Actions 串接 Azure，完成從程式碼提交、測試、AI 輔助檢查到雲端部署的流程。
 
-本版本使用 .NET 8 ASP.NET Core Minimal API 作為後端，使用 HTML、CSS 與原生 JavaScript 作為前端。前後端由同一個 ASP.NET Core 服務提供，因此學員只需要啟動一個服務即可完成示範。
+本版本使用 .NET 8 ASP.NET Core Minimal API 作為後端，使用 HTML、CSS 與原生 JavaScript 作為前端。前端原始檔放在同一個 Repository 的 `wwwroot`；本機與 Azure Container Apps 仍可由同一個 ASP.NET Core 服務提供頁面與 API，正式展示也可由 GitHub Pages 發佈前端，再由瀏覽器呼叫 Container Apps API。
 
 ## 課程目標
 
@@ -33,7 +33,8 @@ GitHub Push / Pull Request
 - GET /api/challenge：取得今日課程任務；首頁會先從任務候選清單隨機輪播標題 6 秒，再顯示抽取結果
 - GET /api/challenges：取得今日課程任務的候選清單
 - POST /api/sentiment/analyze：分析評論的正負向情緒
-- /：HTML 與 JavaScript 前端
+- /：由 ASP.NET Core 提供的 HTML 前端（本機與 Container Apps 相容入口）
+- GitHub Pages：正式靜態前端入口；瀏覽器透過 CORS 呼叫上述 API
 
 前端目前採用豆沙色主題，主要色票定義於 `src/AiCicdAzureLab.Api/wwwroot/styles.css`：
 
@@ -50,6 +51,7 @@ GitHub Push / Pull Request
     │  ├─ workflows/
     │  │  ├─ ci.yml
     │  │  ├─ azure-deploy.yml
+    │  │  ├─ pages-deploy.yml
     │  │  └─ ai-review.yml
     │  └─ workflow-templates/
     │     └─ azure-deploy.yml
@@ -61,11 +63,13 @@ GitHub Push / Pull Request
     │     ├─ AiCicdAzureLab.Api.csproj
     │     └─ wwwroot/
     │        ├─ index.html
+    │        ├─ api-config.js
     │        ├─ app.js
     │        └─ styles.css
     ├─ tests/
     │  └─ AiCicdAzureLab.Api.Tests/
     ├─ docs/
+    ├─ scripts/
     ├─ .dockerignore
     ├─ .env.example
     ├─ .gitignore
@@ -134,10 +138,13 @@ API 使用 Microsoft Entra ID bearer token，不使用或保存長期共用 API 
 1. 設定 .NET 8
 2. 還原相依套件
 3. 執行 xUnit 測試
-4. 驗證 AI 審查請求格式
-5. 建立 Docker Image
+4. 執行 Python workflow 與前端靜態網站檢查
+5. 驗證 AI 審查請求格式
+6. 建立 Docker Image
 
 實際部署 workflow 位於 `.github/workflows/azure-deploy.yml`，會在 `main` 分支 push 或手動觸發時，先執行測試，再透過 OIDC 將 image 推送至 ACR 並更新既有 Container App。啟用部署前，請依 [docs/azure-setup.md](docs/azure-setup.md) 設定 GitHub `demo` Environment、Entra Federated Credential 與最小範圍的 Azure 權限。未完成設定時，CI 不受影響；部署 workflow 會在設定檢查階段停止。
+
+GitHub Pages 前端部署方式、Repository Variable、Container Apps CORS 設定與學員 fork 的設定步驟，請參閱 [docs/github-pages.md](docs/github-pages.md)。Pages workflow 只會在 `main` 的 Azure deploy workflow 成功後發佈該次程式碼版本。
 
 `.github/workflow-templates/azure-deploy.yml` 是課堂教學參考檔，不會由本 Repository 執行，且只提供手動觸發。它保留供學員閱讀、比較或帶到其他 Repository 示範；實際部署請使用 `.github/workflows/azure-deploy.yml`，並依目標 Repository 重新設定 OIDC subject 與 Azure 權限。
 

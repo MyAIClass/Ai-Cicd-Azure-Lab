@@ -22,7 +22,7 @@ class ChallengeAnimationTests(unittest.TestCase):
         self.assertIn("window.clearInterval(animationInterval)", self.source)
         self.assertIn("Math.random()", self.source)
         self.assertIn("pickRandomChallengeMessage", self.source)
-        self.assertIn('fetch("/api/challenges")', self.source)
+        self.assertIn('fetch(apiUrl("/api/challenges"))', self.source)
         self.assertIn('candidate.title', self.source)
         self.assertIn("challengeAnimationDurationMs = 6000", self.source)
 

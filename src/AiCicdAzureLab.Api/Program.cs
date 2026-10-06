@@ -5,6 +5,22 @@ using Azure.Identity;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
+{
+    var corsAllowedOrigins = builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .GetChildren()
+        .Select(section => section.Value?.Trim())
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Select(origin => origin!.TrimEnd('/'))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    policy
+        .WithOrigins(corsAllowedOrigins)
+        .WithMethods("GET", "POST")
+        .WithHeaders("Content-Type");
+}));
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<CaptchaService>();
 var azureOpenAiConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["AZURE_OPENAI_ENDPOINT"])
@@ -26,6 +42,8 @@ else
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRouting();
+app.UseCors("Frontend");
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
