@@ -143,7 +143,7 @@ API 使用 Microsoft Entra ID bearer token，不使用或保存長期共用 API 
 
 `.github/workflows/ai-review.yml` 會在 Pull Request 開啟或更新時執行，沿用相同的 OIDC 設定登入 Azure，呼叫 Azure OpenAI 為這次差異產生審查建議，並留言回 Pull Request。這個 workflow 只提供建議，不會自動核准或修改程式碼；若 AI 呼叫失敗，審查檢查會顯示失敗並提示人工審查，獨立的 .NET CI 不受影響。啟用前請依 [docs/azure-openai-review.md](docs/azure-openai-review.md) 補上 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_DEPLOYMENT` 兩個 Environment Variables，並確認該 service principal 已取得 Azure OpenAI 資源的呼叫權限。
 
-`.github/workflows/ai-ci-diagnosis.yml` 會在 `.NET CI` 失敗後讀取失敗步驟日誌，遮罩常見機密並限制內容長度後，透過 Azure OpenAI 產生診斷建議。若失敗執行與 Pull Request 有關，workflow 會更新該 PR 的診斷留言；它不會自動修正程式碼、重新執行 CI 或變更失敗結果。啟用前請依 [docs/azure-openai-ci-diagnosis.md](docs/azure-openai-ci-diagnosis.md) 設定獨立的 OIDC Environment。
+`.github/workflows/ai-ci-diagnosis.yml` 會在 `.NET CI` 失敗後讀取失敗步驟日誌，遮罩常見機密並限制內容長度後，透過 Azure OpenAI 產生診斷建議；若 `.NET CI` 通過，則以成功的說明工作標示「無需診斷」，不會呼叫 Azure OpenAI。若失敗執行與 Pull Request 有關，workflow 會更新該 PR 的診斷留言；它不會自動修正程式碼、重新執行 CI 或變更失敗結果。啟用前請依 [docs/azure-openai-ci-diagnosis.md](docs/azure-openai-ci-diagnosis.md) 設定獨立的 OIDC Environment。
 
 ## 推送到 GitHub
 

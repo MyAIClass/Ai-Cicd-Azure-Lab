@@ -21,9 +21,18 @@ class AiCiDiagnosisWorkflowTests(unittest.TestCase):
         self.assertIn('workflows: [".NET CI"]', workflow)
         self.assertIn("types: [completed]", workflow)
         self.assertIn("if: github.event.workflow_run.conclusion == 'failure'", workflow)
+        self.assertIn(
+            "if: github.event.workflow_run.conclusion == 'success'", workflow
+        )
         self.assertIn("environment: azure-openai-diagnosis", workflow)
         self.assertIn("actions: read", workflow)
         self.assertIn("pull-requests: write", workflow)
+
+    def test_successful_dotnet_ci_has_explanatory_job(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("name: No diagnosis needed (CI passed)", workflow)
+        self.assertIn('run: echo "CI 通過，無需進行 Azure OpenAI 診斷。"', workflow)
 
     def test_workflow_collects_bounded_sanitized_failed_logs(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
