@@ -3,6 +3,7 @@
   font-family: "Segoe UI", "Noto Sans TC", sans-serif;
   color: #4a3636;
   background: #f4e7e4;
+  --card-background: linear-gradient(135deg, #fff8e7, #ffffff);
 }
 
 * {
@@ -63,7 +64,7 @@ h1 {
   padding: 24px;
   border: 1px solid #e3c9c5;
   border-radius: 16px;
-  background: #fff9f7;
+  background: var(--card-background);
   box-shadow: 0 8px 24px rgba(120, 75, 75, 0.12);
 }
 
@@ -177,7 +178,7 @@ button:disabled {
 .sentiment-error { min-height: 22px; margin: 8px 0 0; color: #a33a2b; text-align: center; }
 
 .quote-card {
-  background: #fff9f7;
+  background: var(--card-background);
 }
 
 .daily-quote {
