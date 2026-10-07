@@ -16,12 +16,24 @@
 
 ## 系統架構
 
-GitHub Push / Pull Request
-→ GitHub Actions
-→ dotnet restore、dotnet test、Docker build
-→ Azure Container Registry
-→ Azure Container Apps
-→ Application Insights / Log Analytics（後續階段可選）
+    CI/CD 流程
+    開發者
+    ├─ Push / Pull Request
+    │  └─ GitHub Actions
+    │     ├─ .NET CI：restore → test → AI 請求測試 → Docker build
+    │     ├─ Pull Request → OIDC 登入 Azure → Azure OpenAI 審查 → 審查建議留言至 PR
+    │     └─ CI 失敗 → 遮罩日誌 → OIDC 登入 Azure → Azure OpenAI 診斷 → 診斷建議留言至 PR
+    └─ main 分支 Push / 手動觸發
+       └─ Azure 部署 Workflow
+          ├─ dotnet test → OIDC 登入 Azure
+          ├─ Docker build / push → Azure Container Registry
+          └─ 更新映像檔 → Azure Container Apps
+
+    執行階段
+    使用者 ── HTTPS ──> Azure Container Apps
+                            ├─ ASP.NET Core API + HTML/CSS/JavaScript 前端
+                            ├─ Managed Identity ──> Azure OpenAI（情緒分析）
+                            └─（後續階段可選）──> Application Insights / Log Analytics
 
 應用程式本身包含：
 
